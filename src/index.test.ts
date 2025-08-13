@@ -15,7 +15,7 @@ const mockLoadConfig = configModule.loadConfig as Mock<() => Promise<any>>;
 const mockGetGitInfo = gitModule.getGitInfo as Mock<
   (config: any) => Promise<any>
 >;
-const mockCalculateVersion = versionModule.calculateVersion as Mock<
+const mockCalculateVersion = versionModule.calculateVersion as unknown as Mock<
   (info: any, config: any) => string
 >;
 
