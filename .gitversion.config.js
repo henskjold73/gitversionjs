@@ -1,7 +1,7 @@
 // .gitversion.config.js
 export default {
-  "tag-prefix": "v",
-  "branch-prefixes": {
+  tagPrefix: "v",
+  branchPrefixes: {
     feature: "feature/",
     release: "release/",
     hotfix: "hotfix/",
