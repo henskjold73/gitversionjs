@@ -1,0 +1,29 @@
+{
+  "name": "gitversionjs",
+  "version": "1.0.0",
+  "description": "Auto-generates SemVer versions from Git tags and branches, GitFlow-style.",
+  "keywords": [
+    "git",
+    "versioning",
+    "semver",
+    "gitflow",
+    "typescript",
+    "cli",
+    "node",
+    "react",
+    "nextjs"
+  ],
+  "license": "ISC",
+  "author": "horrible",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests yet\"",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "typescript": "^5.9.2"
+  }
+}
