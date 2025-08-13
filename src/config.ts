@@ -5,31 +5,49 @@ import path from "path";
 import { pathToFileURL } from "url";
 
 export interface GitVersionConfig {
-  "tag-prefix"?: string;
-  "branch-prefixes"?: Record<string, string>;
+  tagPrefix?: string;
+  branchPrefixes?: Record<string, string>;
 }
 
 const defaultConfig: GitVersionConfig = {
-  "tag-prefix": "v",
-  "branch-prefixes": {
+  tagPrefix: "v",
+  branchPrefixes: {
     feature: "feature/",
     release: "release/",
     hotfix: "hotfix/",
   },
 };
 
-export async function loadConfig(): Promise<GitVersionConfig> {
-  const configPath = path.resolve(process.cwd(), ".gitversion.config.js");
+export async function loadConfig(
+  configFilePath?: string
+): Promise<GitVersionConfig> {
+  const configPath =
+    configFilePath ?? path.resolve(process.cwd(), ".gitversion.config.js");
 
   try {
     await fs.access(configPath);
     const configModule = await import(pathToFileURL(configPath).href);
+    const rawConfig = configModule.default;
+
+    const validatedConfig: GitVersionConfig = {};
+
+    if (typeof rawConfig.tagPrefix === "string") {
+      validatedConfig.tagPrefix = rawConfig.tagPrefix;
+    }
+
+    if (
+      typeof rawConfig.branchPrefixes === "object" &&
+      rawConfig.branchPrefixes !== null &&
+      !Array.isArray(rawConfig.branchPrefixes)
+    ) {
+      validatedConfig.branchPrefixes = rawConfig.branchPrefixes;
+    }
+
     return {
       ...defaultConfig,
-      ...configModule.default,
+      ...validatedConfig,
     };
-  } catch (err) {
-    // File doesn't exist or failed to load
+  } catch {
     return defaultConfig;
   }
 }

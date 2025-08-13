@@ -1,10 +1,10 @@
 // src/index.ts
 
-import { loadConfig } from "./config";
-import { getGitInfo } from "./git";
-import { calculateVersion } from "./version";
+import { loadConfig } from "./config.js";
+import { getGitInfo } from "./git.js";
+import { calculateVersion, GitVersionInfo } from "./version.js";
 
-export async function gitversion(): Promise<string> {
+export async function gitversion(): Promise<GitVersionInfo> {
   const config = await loadConfig();
   const gitInfo = await getGitInfo(config);
   const version = calculateVersion(gitInfo, config);
