@@ -16,7 +16,6 @@ function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Strip prefix only if it's at the start (e.g., "v1.2.3" -> "1.2.3")
 function parseVersionFromTag(
   tag: string,
   prefix: string
@@ -24,33 +23,40 @@ function parseVersionFromTag(
   const cleaned = prefix
     ? tag.replace(new RegExp(`^${escapeRegExp(prefix)}`), "")
     : tag;
-  const [maj, min, pat] = cleaned.split(".").map((x) => Number(x) || 0);
+  const [maj, min, pat] = cleaned.split(".").map((n) => Number(n) || 0);
   return [maj, min, pat];
 }
 
-// Accept release/x.y or release/x.y.z (same for hotfix)
+// Supports:
+//   release/2.2.0  → 2.2.0
+//   release/2.2    → 2.2.0
+//   release/2      → 2.0.0
+// Same for hotfix/* (hotfix/1.2.3 etc.)
 function parseVersionFromBranch(
   branch: string
 ): [number, number, number] | null {
-  const m = branch.match(/^(?:release|hotfix)\/(v?\d+)\.(\d+)(?:\.(\d+))?$/);
+  const m = branch.match(
+    /^(?:release|hotfix)\/(v?\d+)(?:\.(\d+))?(?:\.(\d+))?$/
+  );
   if (!m) return null;
   const major = Number(m[1].replace(/^v/, "")) || 0;
-  const minor = Number(m[2]) || 0;
+  const minor = m[2] ? Number(m[2]) || 0 : 0;
   const patch = m[3] ? Number(m[3]) || 0 : 0;
   return [major, minor, patch];
 }
 
-// Numeric compare for tags like "v10.0.0" vs "v2.0.0"
-function cmpTagSemverDesc(a: string, b: string, prefix: string): number {
-  const [A, B] = [a, b].map((t) => parseVersionFromTag(t, prefix));
-  // compare major, then minor, then patch (descending)
-  if (A[0] !== B[0]) return B[0] - A[0];
-  if (A[1] !== B[1]) return B[1] - A[1];
-  return B[2] - A[2];
+function sortTagsDesc(tags: string[], prefix: string): string[] {
+  return [...tags].sort((a, b) => {
+    const [Amaj, Amin, Apat] = parseVersionFromTag(a, prefix);
+    const [Bmaj, Bmin, Bpat] = parseVersionFromTag(b, prefix);
+    if (Amaj !== Bmaj) return Bmaj - Amaj;
+    if (Amin !== Bmin) return Bmin - Amin;
+    return Bpat - Apat;
+  });
 }
 
-function fmt(major: number, minor: number, patch: number) {
-  return `${major}.${minor}.${patch}`;
+function fmt(maj: number, min: number, pat: number) {
+  return `${maj}.${min}.${pat}`;
 }
 
 export function calculateVersion(
@@ -60,43 +66,43 @@ export function calculateVersion(
   const { tags, branchType, currentBranch } = gitInfo;
   const { tagPrefix = "v" } = config;
 
-  // 1) If branch encodes a version, use it as the base (authoritative)
+  // Base: branch-encoded version > latest tag > default
   const branchVer = parseVersionFromBranch(currentBranch);
-
-  // 2) Else find latest tag (semver-aware)
-  const latestTag = tags
-    .slice()
-    .sort((a, b) => cmpTagSemverDesc(a, b, tagPrefix))[0];
+  const latestTag = sortTagsDesc(tags, tagPrefix)[0] ?? null;
   const tagged = latestTag ? parseVersionFromTag(latestTag, tagPrefix) : null;
+  const [baseMajor, baseMinor, basePatch] = branchVer ?? tagged ?? [0, 1, 0];
 
-  // 3) Fallback base if neither branch nor tags give one
-  const base: [number, number, number] = branchVer ?? tagged ?? [0, 1, 0];
+  // Output (these are returned)
+  let outMajor = baseMajor;
+  let outMinor = baseMinor;
+  let outPatch = basePatch;
 
-  let outMajor = base[0],
-    outMinor = base[1],
-    outPatch = base[2];
   let version = "";
 
   switch (branchType) {
     case "main": {
-      // exactly base (tagged or branch-provided)
+      // Exactly the base
       version = fmt(outMajor, outMinor, outPatch);
       break;
     }
     case "develop": {
-      // next minor prebuild-ish (keep your dot timestamp style)
-      version = `${outMajor}.${outMinor + 1}.0.${Date.now()}`;
+      // Bump MINOR → reset PATCH
+      outMinor = outMinor + 1;
+      outPatch = 0;
+      version = `${outMajor}.${outMinor}.${outPatch}.${Date.now()}`;
       break;
     }
     case "feature": {
-      // next minor prebuild-ish
-      version = `${outMajor}.${outMinor + 1}.0.${Date.now()}`;
+      // Same policy as develop (minor prebuild). If you prefer patch prebuilds, change below.
+      outMinor = outMinor + 1;
+      outPatch = 0;
+      version = `${outMajor}.${outMinor}.${outPatch}.${Date.now()}`;
       break;
     }
     case "release": {
-      // If branch said release/x.y(.z), we already used it as base → use that exact version.
-      // Otherwise, keep your old rule: +1 minor, patch=0
+      // If branch encodes version → authoritative (already normalized e.g. 2 -> 2.0.0, 2.2 -> 2.2.0)
       if (!branchVer) {
+        // Bump MINOR → reset PATCH
         outMinor = outMinor + 1;
         outPatch = 0;
       }
@@ -104,8 +110,7 @@ export function calculateVersion(
       break;
     }
     case "hotfix": {
-      // If branch said hotfix/x.y(.z), we already used it as base → use that exact version.
-      // Otherwise, bump patch from base.
+      // If branch encodes version → authoritative; else bump PATCH
       if (!branchVer) {
         outPatch = outPatch + 1;
       }
