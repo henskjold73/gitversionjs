@@ -21,7 +21,7 @@ describe("calculateVersion", () => {
       branchType: "feature",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toMatch(/^1\.2\.3-beta\.\d+$/);
+    expect(version.version).toMatch(/^1\.3\.0\.\d+$/);
   });
 
   it("returns next minor version for release branch", () => {

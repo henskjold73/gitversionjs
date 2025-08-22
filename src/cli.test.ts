@@ -45,6 +45,8 @@ describe("CLI", () => {
     const result = await runCli(["--output", "json"]);
     const parsed = JSON.parse(result.stdout);
 
+    console.log(parsed);
+
     expect(parsed).toHaveProperty("version");
     expect(parsed.version).toMatch(/^\d+\.\d+\.\d+$/);
 
