@@ -127,4 +127,22 @@ describe("gitversion (integration)", () => {
     const result = await gitversion();
     expect(result).toBe("v1.2.3");
   });
+
+  it("passes develop branch to the version calculator", async () => {
+    const mockConfig = { tagPrefix: "" };
+    const mockGitInfo = {
+      currentBranch: "develop",
+      tags: ["1.2.3"],
+      branchType: "develop",
+    };
+
+    mockLoadConfig.mockResolvedValue(mockConfig);
+    mockGetGitInfo.mockResolvedValue(mockGitInfo);
+    mockCalculateVersion.mockReturnValue("v1.3.0"); // whatever your scheme returns
+
+    const result = await gitversion();
+
+    expect(mockCalculateVersion).toHaveBeenCalledWith(mockGitInfo, mockConfig);
+    expect(result).toBe("v1.3.0");
+  });
 });

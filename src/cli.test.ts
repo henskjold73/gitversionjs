@@ -48,12 +48,12 @@ describe("CLI", () => {
     expect(parsed).toHaveProperty("version");
     expect(parsed.version).toMatch(/^\d+\.\d+\.\d+$/);
 
-    expect(parsed).toHaveProperty("major", 0);
-    expect(parsed).toHaveProperty("minor", 1);
+    expect(parsed).toHaveProperty("major", 1);
+    expect(parsed).toHaveProperty("minor", 0);
     expect(parsed).toHaveProperty("patch", 0);
     expect(parsed).toHaveProperty("branch", "main");
-    expect(parsed).toHaveProperty("tag", null);
-    expect(parsed).toHaveProperty("branchType", null);
+    expect(parsed).toHaveProperty("tag", "v1.0.0");
+    expect(parsed).toHaveProperty("branchType", "main");
     expect(parsed).toHaveProperty("timestamp");
     expect(new Date(parsed.timestamp).toISOString()).toBe(parsed.timestamp);
 

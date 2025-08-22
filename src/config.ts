@@ -12,6 +12,8 @@ export interface GitVersionConfig {
 const defaultConfig: GitVersionConfig = {
   tagPrefix: "v",
   branchPrefixes: {
+    main: "main",
+    develop: "develop",
     feature: "feature/",
     release: "release/",
     hotfix: "hotfix/",

@@ -21,6 +21,8 @@ describe("loadConfig", () => {
     const config = await loadConfig("nonexistent.js");
     expect(config.tagPrefix).toBe("v");
     expect(config.branchPrefixes).toEqual({
+      main: "main",
+      develop: "develop",
       feature: "feature/",
       release: "release/",
       hotfix: "hotfix/",
@@ -54,6 +56,8 @@ describe("loadConfig", () => {
     const config = await loadConfig(filePath);
     expect(config.tagPrefix).toBe("partial-");
     expect(config.branchPrefixes).toEqual({
+      main: "main",
+      develop: "develop",
       feature: "feature/",
       release: "release/",
       hotfix: "hotfix/",
@@ -68,6 +72,8 @@ describe("loadConfig", () => {
     const config = await loadConfig(filePath);
     expect(config.tagPrefix).toBe("v");
     expect(config.branchPrefixes).toEqual({
+      main: "main",
+      develop: "develop",
       feature: "feature/",
       release: "release/",
       hotfix: "hotfix/",
