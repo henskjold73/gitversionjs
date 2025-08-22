@@ -22,7 +22,10 @@ export async function getGitInfo(config: GitVersionConfig): Promise<GitInfo> {
     .split("\n")
     .map((tag) => tag.trim())
     .filter(Boolean);
-  const tags = allTags.filter((tag) => tag.startsWith(tagPrefix));
+
+  const tags = allTags.filter((tag) =>
+    tagPrefix ? tag.startsWith(tagPrefix) : true
+  );
 
   const branchType =
     Object.entries(branchPrefixes).find(([type, prefix]) =>
