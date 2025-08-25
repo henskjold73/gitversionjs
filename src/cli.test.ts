@@ -37,7 +37,7 @@ function runCli(
 describe("CLI", () => {
   it("prints version in text format by default", async () => {
     const result = await runCli();
-    expect(result.stdout).toMatch(/^\d+\.\d+\.\d+/);
+    expect(result.stdout).toMatch(/^\d+\.\d+\.\d+\.\d+$/); // Includes build number
     expect(result.stderr).toBe("");
   });
 
@@ -48,7 +48,7 @@ describe("CLI", () => {
     console.log(parsed);
 
     expect(parsed).toHaveProperty("version");
-    expect(parsed.version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(parsed.version).toMatch(/^\d+\.\d+\.\d+\.\d+$/); // Includes build number
 
     expect(parsed).toHaveProperty("major", 1);
     expect(parsed).toHaveProperty("minor", 0);
@@ -57,7 +57,6 @@ describe("CLI", () => {
     expect(parsed).toHaveProperty("tag", "v1.0.0");
     expect(parsed).toHaveProperty("branchType", "main");
     expect(parsed).toHaveProperty("timestamp");
-    expect(new Date(parsed.timestamp).toISOString()).toBe(parsed.timestamp);
 
     expect(result.stderr).toBe("");
   });

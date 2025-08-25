@@ -10,6 +10,7 @@ GitVersionJS is a tiny tool that turns your Git tags & branches into a semantic 
 - Configurable tag prefix & branch naming
 - Works locally and in CI
 - Zero runtime deps for consumers
+- Includes a `.build` number (commit count) in the version string.
 
 ---
 
@@ -42,8 +43,8 @@ gitversionjs --cwd /path/to/repo --output json
 ```ts
 import { gitversion } from "gitversionjs";
 
-const info = await gitversion(); // { version, major, minor, patch, ... }
-console.log(info.version); // e.g. "1.2.0", "1.3.0.1724329999"
+const info = await gitversion(); // { version, major, minor, patch, build, ... }
+console.log(info.version); // e.g. "1.2.0.5", "1.3.0.1724329999"
 
 /// optional: target a specific repo directory
 const infoFromOtherRepo = await gitversion({ cwd: "/path/to/repo" });
@@ -72,9 +73,9 @@ export default {
 ### How versions are determined (default rules)
 
 - **Tags**: latest semver tag (prefix optional) is the base (e.g. `v1.2.3` or `1.2.3`)
-- **main**: exactly the base tag
-- **develop**/**feature/**: bump **minor**, reset **patch → 0**, append a timestamp token  
-  (e.g. `1.2.3` → `1.3.0.<timestamp>`)
+- **main**: exactly the base tag, with `.build` appended (e.g., `1.2.3.5`).
+- **develop**/**feature/**: bump **minor**, reset **patch → 0**, append `.build` (commit count)  
+  (e.g. `1.2.3` → `1.3.0.5`).
 - **release/X[.Y[.Z]]**: branch name is authoritative if it contains a version  
   (`release/2` → `2.0.0`, `release/2.1` → `2.1.0`, `release/2.1.3` → `2.1.3`).  
   If not encoded, bump **minor** and reset **patch → 0** from base.
@@ -111,7 +112,7 @@ import { gitversion } from "gitversionjs";
 const info = await gitversion();
 const pkgPath = path.resolve("package.json");
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-pkg.version = info.version; // or `${info.major}.${info.minor}.${info.patch}` if you want to drop pre-release tokens
+pkg.version = info.version; // or `${info.major}.${info.minor}.${info.patch}.${info.build}` if you want to include the build number
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
 ```
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { GitVersionConfig } from "./config.js";
 import { GitInfo } from "./git.js";
@@ -13,6 +13,10 @@ const defaultConfig: GitVersionConfig = {
   },
 };
 
+vi.mock("child_process", () => ({
+  execSync: vi.fn(() => "abc123 Commit 1\n"),
+}));
+
 describe("calculateVersion", () => {
   it("returns prerelease version for feature branch", () => {
     const gitInfo: GitInfo = {
@@ -21,7 +25,7 @@ describe("calculateVersion", () => {
       branchType: "feature",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toMatch(/^1\.3\.0\.\d+$/);
+    expect(version.version).toBe("1.3.0.1"); // Includes build number
   });
 
   it("returns next minor version for release branch", () => {
@@ -31,7 +35,7 @@ describe("calculateVersion", () => {
       branchType: "release",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("1.3.0");
+    expect(version.version).toBe("1.3.0.1"); // Includes build number
   });
 
   it("returns patch bump for hotfix branch", () => {
@@ -41,7 +45,7 @@ describe("calculateVersion", () => {
       branchType: "hotfix",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("1.2.4");
+    expect(version.version).toBe("1.2.4.1"); // Includes build number
   });
 
   it("returns latest tag for main branch", () => {
@@ -51,7 +55,7 @@ describe("calculateVersion", () => {
       branchType: null,
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("1.2.3");
+    expect(version.version).toBe("1.2.3.1"); // Includes build number
   });
 
   it("returns default version when no tags exist", () => {
@@ -61,7 +65,7 @@ describe("calculateVersion", () => {
       branchType: null,
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("0.1.0");
+    expect(version.version).toBe("0.1.0.0"); // Includes build number (0 commits cuz no tags)
   });
 
   it("respects custom tag prefix", () => {
@@ -75,6 +79,6 @@ describe("calculateVersion", () => {
       branchType: "release",
     };
     const version = calculateVersion(gitInfo, config);
-    expect(version.version).toBe("1.3.0");
+    expect(version.version).toBe("1.3.0.1"); // Includes build number
   });
 });

@@ -1,3 +1,5 @@
+import { execSync } from "child_process";
+
 import { GitVersionConfig } from "./config.js";
 import { GitInfo } from "./git.js";
 
@@ -10,6 +12,7 @@ export type GitVersionInfo = {
   tag: string | null;
   branchType: string | null;
   timestamp: string;
+  commits: string[]; // Include commits in the returned object
 };
 
 function escapeRegExp(s: string) {
@@ -55,8 +58,58 @@ function sortTagsDesc(tags: string[], prefix: string): string[] {
   });
 }
 
-function fmt(maj: number, min: number, pat: number) {
-  return `${maj}.${min}.${pat}`;
+function fmt(maj: number, min: number, pat: number, build?: number) {
+  return build !== undefined
+    ? `${maj}.${min}.${pat}.${build}`
+    : `${maj}.${min}.${pat}`;
+}
+
+function getCommitsSinceLastVersionChange(
+  tags: string[],
+  currentBranch: string,
+  tagPrefix: string,
+  cwd: string = "."
+): string[] {
+  try {
+    // Sort tags in descending order
+    const sortedTags = sortTagsDesc(tags, tagPrefix);
+
+    // Find the latest tag that changed the version
+    let lastVersionTag = null;
+    for (const tag of sortedTags) {
+      const [tagMajor, tagMinor, tagPatch] = parseVersionFromTag(
+        tag,
+        tagPrefix
+      );
+      const [branchMajor, branchMinor, branchPatch] = parseVersionFromBranch(
+        currentBranch
+      ) ?? [0, 1, 0];
+
+      // Check if the tag version differs from the branch version
+      if (
+        tagMajor !== branchMajor ||
+        tagMinor !== branchMinor ||
+        tagPatch !== branchPatch
+      ) {
+        lastVersionTag = tag;
+        break;
+      }
+    }
+
+    // If no tag is found, use the first tag
+    const tagToCompare = lastVersionTag || sortedTags[0];
+
+    // Fetch commits since the determined tag
+    const result = execSync(
+      `git log ${tagToCompare}..HEAD --pretty=format:"%h %s"`,
+      { cwd, encoding: "utf-8" }
+    );
+
+    return result.split("\n").filter(Boolean); // Split into lines and remove empty entries
+  } catch (error) {
+    console.error("Error fetching commits:", error);
+    return [];
+  }
 }
 
 export function calculateVersion(
@@ -72,6 +125,12 @@ export function calculateVersion(
   const tagged = latestTag ? parseVersionFromTag(latestTag, tagPrefix) : null;
   const [baseMajor, baseMinor, basePatch] = branchVer ?? tagged ?? [0, 1, 0];
 
+  // Get commits since the last tag
+  const commits = latestTag
+    ? getCommitsSinceLastVersionChange(tags, currentBranch, tagPrefix)
+    : [];
+  const commitCount = commits.length; // Count the number of commits
+
   // Output (these are returned)
   let outMajor = baseMajor;
   let outMinor = baseMinor;
@@ -81,44 +140,38 @@ export function calculateVersion(
 
   switch (branchType) {
     case "main": {
-      // Exactly the base
-      version = fmt(outMajor, outMinor, outPatch);
+      version = fmt(outMajor, outMinor, outPatch, commitCount);
       break;
     }
     case "develop": {
-      // Bump MINOR → reset PATCH
       outMinor = outMinor + 1;
       outPatch = 0;
-      version = `${outMajor}.${outMinor}.${outPatch}.${Date.now()}`;
+      version = `${outMajor}.${outMinor}.${outPatch}.${commitCount}`;
       break;
     }
     case "feature": {
-      // Same policy as develop (minor prebuild). If you prefer patch prebuilds, change below.
       outMinor = outMinor + 1;
       outPatch = 0;
-      version = `${outMajor}.${outMinor}.${outPatch}.${Date.now()}`;
+      version = `${outMajor}.${outMinor}.${outPatch}.${commitCount}`;
       break;
     }
     case "release": {
-      // If branch encodes version → authoritative (already normalized e.g. 2 -> 2.0.0, 2.2 -> 2.2.0)
       if (!branchVer) {
-        // Bump MINOR → reset PATCH
         outMinor = outMinor + 1;
         outPatch = 0;
       }
-      version = fmt(outMajor, outMinor, outPatch);
+      version = fmt(outMajor, outMinor, outPatch, commitCount);
       break;
     }
     case "hotfix": {
-      // If branch encodes version → authoritative; else bump PATCH
       if (!branchVer) {
         outPatch = outPatch + 1;
       }
-      version = fmt(outMajor, outMinor, outPatch);
+      version = fmt(outMajor, outMinor, outPatch, commitCount);
       break;
     }
     default: {
-      version = fmt(outMajor, outMinor, outPatch);
+      version = fmt(outMajor, outMinor, outPatch, commitCount);
     }
   }
 
@@ -131,5 +184,6 @@ export function calculateVersion(
     tag: latestTag || null,
     branchType,
     timestamp: new Date().toISOString(),
+    commits, // Include commits in the returned object
   };
 }
