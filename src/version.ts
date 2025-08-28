@@ -157,7 +157,7 @@ export function calculateVersion(
     }
     case "release": {
       if (!branchVer) {
-        outMinor = outMinor + 1;
+        outMinor;
         outPatch = 0;
       }
       version = fmt(outMajor, outMinor, outPatch, commitCount);

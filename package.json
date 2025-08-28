@@ -1,6 +1,6 @@
 {
   "name": "gitversionjs",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Auto-generates SemVer versions from Git tags and branches, GitFlow-style.",
   "keywords": [
     "git",
