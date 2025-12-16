@@ -1,6 +1,6 @@
 {
   "name": "gitversionjs",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Auto-generates SemVer versions from Git tags and branches, GitFlow-style.",
   "keywords": [
     "git",
@@ -29,6 +29,10 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "start": "node dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "dependencies": {
     "commander": "^14.0.0",
     "typescript": "^5.9.2"
