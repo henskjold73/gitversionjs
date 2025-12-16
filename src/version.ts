@@ -26,7 +26,13 @@ function parseVersionFromTag(
   const cleaned = prefix
     ? tag.replace(new RegExp(`^${escapeRegExp(prefix)}`), "")
     : tag;
-  const [maj, min, pat] = cleaned.split(".").map((n) => Number(n) || 0);
+
+  const parts = cleaned.split(".").map((n) => Number(n));
+
+  const maj = Number.isFinite(parts[0]) ? parts[0] : 0;
+  const min = Number.isFinite(parts[1]) ? parts[1] : 0;
+  const pat = Number.isFinite(parts[2]) ? parts[2] : 0;
+
   return [maj, min, pat];
 }
 
