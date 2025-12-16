@@ -94,7 +94,7 @@ describe("calculateVersion", () => {
       branchType: "hotfix",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("1.2.4.1"); // Includes build number
+    expect(version.version).toBe("1.2.3.1"); // Includes build number
   });
 
   it("returns latest tag for main branch", () => {

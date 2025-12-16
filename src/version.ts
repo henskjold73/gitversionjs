@@ -164,9 +164,6 @@ export function calculateVersion(
       break;
     }
     case "hotfix": {
-      if (!branchVer) {
-        outPatch = outPatch + 1;
-      }
       version = fmt(outMajor, outMinor, outPatch, commitCount);
       break;
     }
