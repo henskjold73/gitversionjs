@@ -7,10 +7,7 @@ pr: none
 
 variables:
   NODE_VERSION: "20.x"
-
-  # Default is "false" so normal main pushes DO NOT enter approval/publish stages.
-  # When you want to publish, you manually run the pipeline and set PUBLISH=true.
-  PUBLISH: "false"
+  PUBLISH: "true"
 
 stages:
   # ---------------------------
