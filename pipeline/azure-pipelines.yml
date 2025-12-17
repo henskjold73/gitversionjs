@@ -1,0 +1,119 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr: none
+
+variables:
+  NODE_VERSION: "20.x"
+
+  # Default is "false" so normal main pushes DO NOT enter approval/publish stages.
+  # When you want to publish, you manually run the pipeline and set PUBLISH=true.
+  PUBLISH: "false"
+
+stages:
+  # ---------------------------
+  # Stage 1: Build, Test, Pack
+  # ---------------------------
+  - stage: BuildAndPack
+    displayName: "Build and Pack"
+    jobs:
+      - job: build
+        displayName: "Build/Test/Pack"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: "$(NODE_VERSION)"
+            displayName: "Use Node $(NODE_VERSION)"
+
+          - script: npm ci
+            displayName: "Install"
+
+          - script: npm test
+            displayName: "Test"
+
+          - script: npm run build
+            displayName: "Build"
+
+          - script: |
+              echo "Dry-run pack (must not include tests or release artifacts):"
+              npm pack --dry-run
+
+              echo "Fail if any test files would be published:"
+              npm pack --dry-run | grep -E "dist/.*test" && exit 1 || true
+
+              echo "Fail if any release folder content would be published:"
+              npm pack --dry-run | grep -E "npm notice .*release/" && exit 1 || true
+
+              echo "Create tarball:"
+              npm pack
+              ls -la *.tgz
+            displayName: "Pack + Guards"
+
+          - publish: "$(System.DefaultWorkingDirectory)/*.tgz"
+            artifact: "npm-tarball"
+            displayName: "Publish tarball artifact"
+
+  # ------------------------------------
+  # Stage 2: Manual approval (only if PUBLISH=true)
+  # ------------------------------------
+  - stage: Approve
+    displayName: "Approve Publish"
+    dependsOn: BuildAndPack
+    condition: and(succeeded(), eq(variables['PUBLISH'], 'true'))
+    jobs:
+      - job: manual
+        displayName: "Manual Validation"
+        pool: server
+        timeoutInMinutes: 1440
+        steps:
+          - task: ManualValidation@0
+            inputs:
+              instructions: |
+                Approve to publish the tarball to npm.
+
+                Checklist:
+                - Confirm this main commit is what you intend to publish
+                - Confirm npm pack --dry-run looked correct (no tests, no release/)
+                - Confirm package.json version is correct
+              onTimeout: "reject"
+
+  # ---------------------------
+  # Stage 3: Publish to npm (only if approved)
+  # ---------------------------
+  - stage: Publish
+    displayName: "Publish to npm"
+    dependsOn: Approve
+    condition: succeeded()
+    jobs:
+      - job: publish
+        displayName: "Publish Tarball"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - download: current
+            artifact: "npm-tarball"
+            displayName: "Download tarball artifact"
+
+          - task: NodeTool@0
+            inputs:
+              versionSpec: "$(NODE_VERSION)"
+            displayName: "Use Node $(NODE_VERSION)"
+
+          - script: |
+              cd "$(Pipeline.Workspace)/npm-tarball"
+              ls -la
+
+              npm config set //registry.npmjs.org/:_authToken=$(NPM_TOKEN)
+
+              echo "Publishing tarball:"
+              npm publish *.tgz --access public
+            displayName: "npm publish"
+            env:
+              NPM_TOKEN: $(NPM_TOKEN)
