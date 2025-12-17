@@ -11,11 +11,59 @@ export interface GitInfo {
   branchType: string | null;
 }
 
+function normalizeBranchName(ref: string): string {
+  const trimmed = (ref ?? "").trim();
+  if (!trimmed) return "HEAD";
+  if (trimmed.startsWith("refs/heads/"))
+    return trimmed.slice("refs/heads/".length);
+  if (trimmed.startsWith("refs/")) {
+    const parts = trimmed.split("/");
+    return parts[parts.length - 1] || "HEAD";
+  }
+  if (trimmed.startsWith("remotes/"))
+    return trimmed.replace(/^remotes\//, "").replace(/^origin\//, "");
+  return trimmed;
+}
+
+function inferBranchFromCiEnv(): string | null {
+  const candidates: Array<string | undefined> = [
+    process.env.GITHUB_HEAD_REF,
+    process.env.GITHUB_REF_NAME,
+    process.env.BUILD_SOURCEBRANCHNAME,
+    process.env.BUILD_SOURCEBRANCH,
+    process.env.CI_COMMIT_REF_NAME,
+    process.env.BRANCH_NAME,
+    process.env.GIT_BRANCH,
+  ];
+
+  for (const c of candidates) {
+    const n = normalizeBranchName(c ?? "");
+    if (n && n !== "HEAD") return n;
+  }
+  return null;
+}
+
 export async function getGitInfo(config: GitVersionConfig): Promise<GitInfo> {
   const { tagPrefix = "v", branchPrefixes = {} } = config;
 
-  const branchResult = await execAsync("git rev-parse --abbrev-ref HEAD");
-  const currentBranch = branchResult.stdout.trim();
+  let currentBranch = (
+    await execAsync("git rev-parse --abbrev-ref HEAD")
+  ).stdout.trim();
+
+  if (!currentBranch || currentBranch === "HEAD") {
+    const fromEnv = inferBranchFromCiEnv();
+    if (fromEnv) {
+      currentBranch = fromEnv;
+    } else {
+      try {
+        const nameRev = await execAsync("git name-rev --name-only HEAD");
+        const inferred = normalizeBranchName(nameRev.stdout.trim());
+        if (inferred && inferred !== "HEAD") currentBranch = inferred;
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   const tagResult = await execAsync("git tag --list");
   const allTags = tagResult.stdout

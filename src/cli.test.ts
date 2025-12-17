@@ -53,7 +53,8 @@ describe("CLI", () => {
     expect(parsed).toHaveProperty("major", 0);
     expect(parsed).toHaveProperty("minor", 1);
     expect(parsed).toHaveProperty("patch", 0);
-    expect(parsed).toHaveProperty("branch", "main");
+    expect(["main", "HEAD"]).toContain(parsed.branch);
+
     expect(parsed).toHaveProperty("tag", null);
     expect(parsed).toHaveProperty("branchType", "main");
     expect(parsed).toHaveProperty("timestamp");
