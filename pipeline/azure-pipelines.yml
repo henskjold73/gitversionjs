@@ -39,6 +39,8 @@ stages:
             displayName: "Build"
 
           - script: |
+              set -euo pipefail
+
               echo "Dry-run pack (must not include tests or release artifacts):"
               npm pack --dry-run
 
@@ -50,11 +52,22 @@ stages:
 
               echo "Create tarball:"
               npm pack
-              ls -la *.tgz
-            displayName: "Pack + Guards"
 
-          - publish: "$(System.DefaultWorkingDirectory)/*.tgz"
-            artifact: "npm-tarball"
+              echo "List tarball(s):"
+              ls -la *.tgz
+
+              echo "Stage tarball(s) into artifact staging directory:"
+              mkdir -p "$(Build.ArtifactStagingDirectory)/npm-tarball"
+              mv *.tgz "$(Build.ArtifactStagingDirectory)/npm-tarball/"
+
+              echo "Staged files:"
+              ls -la "$(Build.ArtifactStagingDirectory)/npm-tarball"
+            displayName: "Pack + Guards + Stage tarball"
+
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: "$(Build.ArtifactStagingDirectory)/npm-tarball"
+              artifact: "npm-tarball"
             displayName: "Publish tarball artifact"
 
   # ------------------------------------
@@ -104,7 +117,10 @@ stages:
             displayName: "Use Node $(NODE_VERSION)"
 
           - script: |
+              set -euo pipefail
+
               cd "$(Pipeline.Workspace)/npm-tarball"
+              echo "Files downloaded for publish:"
               ls -la
 
               npm config set //registry.npmjs.org/:_authToken=$(NPM_TOKEN)
