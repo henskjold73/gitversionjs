@@ -1,11 +1,8 @@
-name: Build, Pack, and Publish (manual approve)
+name: CI (build/test/pack)
 
 on:
   push:
     branches: [main]
-
-# No PR trigger (equivalent to `pr: none`)
-# (GitHub Actions doesn't trigger on PR unless you add pull_request.)
 
 permissions:
   contents: read
@@ -15,12 +12,9 @@ env:
 
 jobs:
   build_and_pack:
-    name: Build / Test / Pack
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout (full history + tags)
-        # Equivalent to fetchDepth: 0 and ensuring tags exist
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -45,28 +39,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          echo "Dry-run pack (must not include tests or release artifacts):"
           npm pack --dry-run
-
-          echo "Fail if any test files would be published:"
           npm pack --dry-run | grep -E "dist/.*test" && exit 1 || true
-
-          echo "Fail if any release folder content would be published:"
           npm pack --dry-run | grep -E "npm notice .*release/" && exit 1 || true
-
-          echo "Create tarball:"
           npm pack
-
-          echo "List tarball(s):"
-          ls -la *.tgz
-
-          echo "Stage tarball(s) into ./npm-tarball:"
           mkdir -p npm-tarball
           mv *.tgz npm-tarball/
-
-          echo "Staged files:"
-          ls -la npm-tarball
 
       - name: Upload tarball artifact
         uses: actions/upload-artifact@v4
@@ -75,48 +53,3 @@ jobs:
           path: npm-tarball/*.tgz
           if-no-files-found: error
           retention-days: 7
-
-  publish:
-    name: Publish to npm (requires approval)
-    runs-on: ubuntu-latest
-    needs: build_and_pack
-
-    # This is the GitHub equivalent of your manual approval gate.
-    # You must create an Environment named "npm" and require reviewers for it.
-    environment: npm
-
-    steps:
-      - name: Download tarball artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: npm-tarball
-          path: npm-tarball
-
-      - name: Use Node ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          registry-url: https://registry.npmjs.org/
-
-      - name: Inspect packaged package.json (debug)
-        shell: bash
-        run: |
-          set -euo pipefail
-          ls -la npm-tarball
-          tgz="$(ls -1 npm-tarball/*.tgz | head -n 1)"
-          echo "Using: $tgz"
-          rm -rf package
-          tar -xzf "$tgz"
-          echo "----- package/package.json -----"
-          cat package/package.json
-          echo "----- suspicious strings check -----"
-          grep -nE "npm-tarball|\.tgz|ssh://git@github.com|git\+ssh|github:" -n package/package.json || true
-
-      - name: Publish tarball
-        shell: bash
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          set -euo pipefail
-          ls -la npm-tarball
-          npm publish ./npm-tarball/*.tgz --access public
