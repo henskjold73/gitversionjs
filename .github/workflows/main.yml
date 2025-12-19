@@ -118,9 +118,5 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-
-          echo "Files downloaded for publish:"
           ls -la npm-tarball
-
-          echo "Publishing tarball:"
-          npm publish npm-tarball/*.tgz --access public
+          npm publish ./npm-tarball/*.tgz --access public
