@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout (full history + tags)
-      # Equivalent to fetchDepth: 0 and ensuring tags exist
+        # Equivalent to fetchDepth: 0 and ensuring tags exist
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -97,6 +97,20 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: https://registry.npmjs.org/
+
+      - name: Inspect packaged package.json (debug)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la npm-tarball
+          tgz="$(ls -1 npm-tarball/*.tgz | head -n 1)"
+          echo "Using: $tgz"
+          rm -rf package
+          tar -xzf "$tgz"
+          echo "----- package/package.json -----"
+          cat package/package.json
+          echo "----- suspicious strings check -----"
+          grep -nE "npm-tarball|\.tgz|ssh://git@github.com|git\+ssh|github:" -n package/package.json || true
 
       - name: Publish tarball
         shell: bash
