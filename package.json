@@ -1,7 +1,15 @@
 {
   "name": "gitversionjs",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "Auto-generates SemVer versions from Git tags and branches, GitFlow-style.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/henskjold73/gitversionjs.git"
+  },
+  "homepage": "https://github.com/henskjold73/gitversionjs#readme",
+  "bugs": {
+    "url": "https://github.com/henskjold73/gitversionjs/issues"
+  },
   "keywords": [
     "git",
     "versioning",
@@ -13,8 +21,8 @@
     "react",
     "nextjs"
   ],
-  "license": "i don't care",
-  "author": "horrible",
+  "license": "MIT-0",
+  "author": "henskjold73",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
