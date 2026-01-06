@@ -1,12 +1,22 @@
 // src/index.ts
 
-import { loadConfig } from "./config.js";
+import { LoadConfigOptions, loadConfig } from "./config.js";
 import { getGitInfo } from "./git.js";
 import { calculateVersion, GitVersionInfo } from "./version.js";
 
-export async function gitversion(): Promise<GitVersionInfo> {
-  const config = await loadConfig();
-  const gitInfo = await getGitInfo(config);
-  const version = calculateVersion(gitInfo, config);
+export type GitVersionOptions = LoadConfigOptions & {
+  includeCommits?: boolean;
+};
+
+export async function gitversion(
+  options: GitVersionOptions = {}
+): Promise<GitVersionInfo> {
+  const config = await loadConfig(options);
+  const gitInfo = await getGitInfo(config, { cwd: options.cwd });
+  const needsOptions =
+    options.cwd !== undefined || options.includeCommits !== undefined;
+  const version = needsOptions
+    ? calculateVersion(gitInfo, config, options)
+    : calculateVersion(gitInfo, config);
   return version;
 }

@@ -9,13 +9,23 @@ program
   .name("gitversionjs")
   .description("Generate semantic version from Git tags and branches")
   .option("--output <format>", "Output format: text or json", "text")
+  .option("--cwd <path>", "Path to repository root")
+  .option(
+    "--no-include-commits",
+    "Exclude commit list from JSON output"
+  )
   .parse(process.argv);
 
 const options = program.opts();
 
 (async () => {
   try {
-    const version = await gitversion();
+    const includeCommits =
+      options.output === "json" ? options.includeCommits : false;
+    const version = await gitversion({
+      cwd: options.cwd,
+      includeCommits,
+    });
 
     if (options.output === "json") {
       console.log(JSON.stringify(version, null, 2));
