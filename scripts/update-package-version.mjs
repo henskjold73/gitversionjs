@@ -4,9 +4,15 @@ import { readFileSync, writeFileSync } from "node:fs";
 const rawPackage = readFileSync(new URL("../package.json", import.meta.url), "utf8");
 const pkg = JSON.parse(rawPackage);
 
-const stdout = execFileSync("node", ["dist/cli.js", "--output", "json"], {
-  encoding: "utf8",
-});
+
+const stdout = execFileSync(
+  "node",
+  ["dist/cli.js", "--output", "json", "--no-include-commits"],
+  {
+    encoding: "utf8",
+  }
+);
+
 const info = JSON.parse(stdout);
 
 if (!info?.version) {
