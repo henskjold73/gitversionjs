@@ -43,12 +43,28 @@ function inferBranchFromCiEnv(): string | null {
   return null;
 }
 
-export async function getGitInfo(config: GitVersionConfig): Promise<GitInfo> {
+export type GitInfoOptions = {
+  cwd?: string;
+};
+
+function isValidSemverTag(tag: string, prefix: string): boolean {
+  if (prefix && !tag.startsWith(prefix)) return false;
+  const cleaned = prefix ? tag.slice(prefix.length) : tag;
+  return /^\d+(\.\d+){0,2}$/.test(cleaned);
+}
+
+export async function getGitInfo(
+  config: GitVersionConfig,
+  options: GitInfoOptions = {}
+): Promise<GitInfo> {
+  const { cwd } = options;
   const { tagPrefix = "v", branchPrefixes = {} } = config;
 
-  let currentBranch = (
-    await execAsync("git rev-parse --abbrev-ref HEAD")
-  ).stdout.trim();
+  const execGit = (cmd: string) =>
+    cwd ? execAsync(cmd, { cwd }) : execAsync(cmd);
+
+  let currentBranch = (await execGit("git rev-parse --abbrev-ref HEAD")).stdout
+    .trim();
 
   if (!currentBranch || currentBranch === "HEAD") {
     const fromEnv = inferBranchFromCiEnv();
@@ -56,7 +72,7 @@ export async function getGitInfo(config: GitVersionConfig): Promise<GitInfo> {
       currentBranch = fromEnv;
     } else {
       try {
-        const nameRev = await execAsync("git name-rev --name-only HEAD");
+        const nameRev = await execGit("git name-rev --name-only HEAD");
         const inferred = normalizeBranchName(nameRev.stdout.trim());
         if (inferred && inferred !== "HEAD") currentBranch = inferred;
       } catch {
@@ -65,15 +81,13 @@ export async function getGitInfo(config: GitVersionConfig): Promise<GitInfo> {
     }
   }
 
-  const tagResult = await execAsync("git tag --list");
+  const tagResult = await execGit("git tag --list");
   const allTags = tagResult.stdout
     .split("\n")
     .map((tag) => tag.trim())
     .filter(Boolean);
 
-  const tags = allTags.filter((tag) =>
-    tagPrefix ? tag.startsWith(tagPrefix) : true
-  );
+  const tags = allTags.filter((tag) => isValidSemverTag(tag, tagPrefix));
 
   const branchType =
     Object.entries(branchPrefixes).find(([type, prefix]) =>

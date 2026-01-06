@@ -20,11 +20,19 @@ const defaultConfig: GitVersionConfig = {
   },
 };
 
+export type LoadConfigOptions = {
+  configFilePath?: string;
+  cwd?: string;
+};
+
 export async function loadConfig(
-  configFilePath?: string
+  options: LoadConfigOptions | string = {}
 ): Promise<GitVersionConfig> {
+  const resolvedOptions =
+    typeof options === "string" ? { configFilePath: options } : options;
+  const { configFilePath, cwd = process.cwd() } = resolvedOptions;
   const configPath =
-    configFilePath ?? path.resolve(process.cwd(), ".gitversion.config.js");
+    configFilePath ?? path.resolve(cwd, ".gitversion.config.js");
 
   try {
     await fs.access(configPath);

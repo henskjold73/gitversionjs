@@ -70,60 +70,46 @@ function fmt(maj: number, min: number, pat: number, build?: number) {
     : `${maj}.${min}.${pat}`;
 }
 
-function getCommitsSinceLastVersionChange(
-  tags: string[],
-  currentBranch: string,
-  tagPrefix: string,
-  cwd: string = "."
-): string[] {
+type CommitInfo = {
+  commits: string[];
+  count: number;
+};
+
+function getCommitsSinceLatestTag(
+  latestTag: string,
+  cwd: string,
+  includeCommits: boolean
+): CommitInfo {
   try {
-    // Sort tags in descending order
-    const sortedTags = sortTagsDesc(tags, tagPrefix);
-
-    // Find the latest tag that changed the version
-    let lastVersionTag = null;
-    for (const tag of sortedTags) {
-      const [tagMajor, tagMinor, tagPatch] = parseVersionFromTag(
-        tag,
-        tagPrefix
+    if (includeCommits) {
+      const result = execSync(
+        `git log ${latestTag}..HEAD --pretty=format:"%h %s"`,
+        { cwd, encoding: "utf-8" }
       );
-      const [branchMajor, branchMinor, branchPatch] = parseVersionFromBranch(
-        currentBranch
-      ) ?? [0, 1, 0];
-
-      // Check if the tag version differs from the branch version
-      if (
-        tagMajor !== branchMajor ||
-        tagMinor !== branchMinor ||
-        tagPatch !== branchPatch
-      ) {
-        lastVersionTag = tag;
-        break;
-      }
+      const commits = result.split("\n").filter(Boolean);
+      return { commits, count: commits.length };
     }
 
-    // If no tag is found, use the first tag
-    const tagToCompare = lastVersionTag || sortedTags[0];
-
-    // Fetch commits since the determined tag
-    const result = execSync(
-      `git log ${tagToCompare}..HEAD --pretty=format:"%h %s"`,
-      { cwd, encoding: "utf-8" }
-    );
-
-    return result.split("\n").filter(Boolean); // Split into lines and remove empty entries
+    const countResult = execSync(`git rev-list --count ${latestTag}..HEAD`, {
+      cwd,
+      encoding: "utf-8",
+    });
+    const count = Number.parseInt(countResult.trim(), 10) || 0;
+    return { commits: [], count };
   } catch (error) {
     console.error("Error fetching commits:", error);
-    return [];
+    return { commits: [], count: 0 };
   }
 }
 
 export function calculateVersion(
   gitInfo: GitInfo,
-  config: GitVersionConfig
+  config: GitVersionConfig,
+  options: { cwd?: string; includeCommits?: boolean } = {}
 ): GitVersionInfo {
   const { tags, branchType, currentBranch } = gitInfo;
   const { tagPrefix = "v" } = config;
+  const { cwd = process.cwd(), includeCommits = true } = options;
 
   // Base: branch-encoded version > latest tag > default
   const branchVer = parseVersionFromBranch(currentBranch);
@@ -132,10 +118,9 @@ export function calculateVersion(
   const [baseMajor, baseMinor, basePatch] = branchVer ?? tagged ?? [0, 1, 0];
 
   // Get commits since the last tag
-  const commits = latestTag
-    ? getCommitsSinceLastVersionChange(tags, currentBranch, tagPrefix)
-    : [];
-  const commitCount = commits.length; // Count the number of commits
+  const { commits, count: commitCount } = latestTag
+    ? getCommitsSinceLatestTag(latestTag, cwd, includeCommits)
+    : { commits: [], count: 0 };
 
   // Output (these are returned)
   let outMajor = baseMajor;
@@ -163,7 +148,7 @@ export function calculateVersion(
     }
     case "release": {
       if (!branchVer) {
-        outMinor;
+        outMinor = outMinor + 1;
         outPatch = 0;
       }
       version = fmt(outMajor, outMinor, outPatch, commitCount);
