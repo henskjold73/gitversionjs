@@ -41,6 +41,13 @@ stages:
           - script: |
               set -euo pipefail
 
+              git fetch --tags --force --prune
+              node scripts/update-package-version.mjs
+            displayName: "Update package.json version from tags"
+
+          - script: |
+              set -euo pipefail
+
               echo "Dry-run pack (must not include tests or release artifacts):"
               npm pack --dry-run
 
