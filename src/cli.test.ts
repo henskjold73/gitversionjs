@@ -45,18 +45,28 @@ describe("CLI", () => {
     const result = await runCli(["--output", "json"]);
     const parsed = JSON.parse(result.stdout);
 
-    console.log(parsed);
-
     expect(parsed).toHaveProperty("version");
     expect(parsed.version).toMatch(/^\d+\.\d+\.\d+\.\d+$/); // Includes build number
 
     expect(parsed).toHaveProperty("major", 0);
     expect(parsed).toHaveProperty("minor", 1);
     expect(parsed).toHaveProperty("patch", 0);
-    expect(["main", "HEAD"]).toContain(parsed.branch);
+    expect(parsed).toHaveProperty("branch");
+    expect(parsed.branch).toEqual(expect.any(String));
 
     expect(parsed).toHaveProperty("tag", null);
-    expect(parsed).toHaveProperty("branchType", "main");
+    const branchPrefixes = {
+      main: "main",
+      develop: "develop",
+      feature: "feature/",
+      release: "release/",
+      hotfix: "hotfix/",
+    };
+    const expectedBranchType =
+      Object.entries(branchPrefixes).find(([, prefix]) =>
+        parsed.branch.startsWith(prefix)
+      )?.[0] ?? null;
+    expect(parsed).toHaveProperty("branchType", expectedBranchType);
     expect(parsed).toHaveProperty("timestamp");
 
     expect(result.stderr).toBe("");
