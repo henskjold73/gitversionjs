@@ -58,6 +58,7 @@ describe("CLI", () => {
     expect(
       parsed.branchType === null || typeof parsed.branchType === "string"
     ).toBe(true);
+
     expect(parsed).toHaveProperty("timestamp");
 
     expect(result.stderr).toBe("");
