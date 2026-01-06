@@ -38,6 +38,22 @@ gitversionjs --cwd /path/to/repo --output json
 
 ---
 
+## CLI usage
+
+```
+Usage: gitversionjs [options]
+
+Generate semantic version from Git tags and branches
+
+Options:
+  --output <format>     Output format: text or json (default: "text")
+  --cwd <path>          Path to repository root
+  --no-include-commits  Exclude commit list from JSON output
+  -h, --help            display help for command
+```
+
+---
+
 ## Library usage (Node ESM)
 
 ```ts
