@@ -2,6 +2,8 @@
 
 GitVersionJS is a tiny tool that turns your Git tags & branches into a semantic version. Use it as a **global CLI** or as a **library**.
 
+> Note: AI-assisted tooling is now involved in maintenance of this project. Changes may be drafted, reviewed, or refined with AI support, with final repository decisions still made in this codebase.
+
 ## Features
 
 - Infers version from Git:
