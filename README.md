@@ -7,7 +7,7 @@ GitVersionJS is a tiny tool that turns your Git tags & branches into a semantic 
 ## Features
 
 - Infers version from Git:
-  - Uses the latest tag (e.g. `v1.2.3` or `1.2.3`)
+  - Uses the latest reachable tag from the current `HEAD` (e.g. `v1.2.3` or `1.2.3`)
   - Applies branch rules (e.g. `develop`, `feature/*`, `release/*`, `hotfix/*`)
 - Configurable tag prefix & branch naming
 - Works locally and in CI
@@ -90,7 +90,7 @@ export default {
 
 ### How versions are determined (default rules)
 
-- **Tags**: latest semver tag (prefix optional) is the base (e.g. `v1.2.3` or `1.2.3`)
+- **Tags**: latest reachable semver tag (prefix optional) is the base (e.g. `v1.2.3` or `1.2.3`)
 - **main**: exactly the base tag, with `.build` appended (e.g., `1.2.3.5`).
 - **develop**/**feature/**: bump **minor**, reset **patch → 0**, append `.build` (commit count)  
   (e.g. `1.2.3` → `1.3.0.5`).

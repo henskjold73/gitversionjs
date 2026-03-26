@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { execSync } from "child_process";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GitVersionConfig } from "./config.js";
 import { GitInfo } from "./git.js";
@@ -66,7 +67,14 @@ vi.mock("child_process", () => ({
   execSync: vi.fn(() => "abc123 Commit 1\n"),
 }));
 
+const mockExecSync = vi.mocked(execSync);
+
 describe("calculateVersion", () => {
+  beforeEach(() => {
+    mockExecSync.mockReset();
+    mockExecSync.mockReturnValue("abc123 Commit 1\n" as any);
+  });
+
   it("returns prerelease version for feature branch", () => {
     const gitInfo: GitInfo = {
       currentBranch: "feature/add-login",
@@ -180,5 +188,64 @@ describe("calculateVersion", () => {
     };
     const version = calculateVersion(gitInfo, defaultConfig);
     expect(version.version).toBe("2.0.1.1");
+  });
+
+  it("uses branch-encoded version for release branches with partial versions", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "release/2.1",
+      tags: ["v1.9.9"],
+      branchType: "release",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("2.1.0.1");
+    expect(version.major).toBe(2);
+    expect(version.minor).toBe(1);
+    expect(version.patch).toBe(0);
+  });
+
+  it("counts commits without returning the commit list when includeCommits is false", () => {
+    mockExecSync.mockReturnValue("7\n" as any);
+
+    const gitInfo: GitInfo = {
+      currentBranch: "feature/add-login",
+      tags: ["v1.2.3"],
+      branchType: "feature",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig, {
+      includeCommits: false,
+      cwd: "/repo",
+    });
+
+    expect(version.version).toBe("1.3.0.7");
+    expect(version.commits).toEqual([]);
+    expect(mockExecSync).toHaveBeenCalledWith("git rev-list --count v1.2.3..HEAD", {
+      cwd: "/repo",
+      encoding: "utf-8",
+    });
+  });
+
+  it("returns branch metadata and empty commits when no tags exist", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "develop",
+      tags: [],
+      branchType: "develop",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("0.2.0.0");
+    expect(version.branch).toBe("develop");
+    expect(version.tag).toBeNull();
+    expect(version.branchType).toBe("develop");
+    expect(version.commits).toEqual([]);
+  });
+
+  it("sorts tags numerically instead of lexically", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "main",
+      tags: ["v1.2.9", "v1.2.10", "v1.10.0"],
+      branchType: "main",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("1.10.0.1");
+    expect(version.tag).toBe("v1.10.0");
   });
 });

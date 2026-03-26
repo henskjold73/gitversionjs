@@ -81,11 +81,21 @@ export async function getGitInfo(
     }
   }
 
-  const tagResult = await execGit("git tag --list");
-  const allTags = tagResult.stdout
-    .split("\n")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  let allTags: string[] = [];
+
+  try {
+    const reachableTagResult = await execGit("git tag --merged HEAD --list");
+    allTags = reachableTagResult.stdout
+      .split("\n")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  } catch {
+    const tagResult = await execGit("git tag --list");
+    allTags = tagResult.stdout
+      .split("\n")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
 
   const tags = allTags.filter((tag) => isValidSemverTag(tag, tagPrefix));
 

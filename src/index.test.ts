@@ -215,4 +215,44 @@ describe("gitversion (integration)", () => {
     expect(mockCalculateVersion).toHaveBeenCalledWith(mockGitInfo, mockConfig);
     expect(result.version).toBe("1.3.0.1");
   });
+
+  it("passes cwd and includeCommits to downstream calls when provided", async () => {
+    const mockConfig = { tagPrefix: "v" };
+    const mockGitInfo = {
+      currentBranch: "feature/add-login",
+      tags: ["v1.0.0"],
+      branchType: "feature",
+    };
+    const mockVersion = {
+      version: "1.1.0.2",
+      major: 1,
+      minor: 1,
+      patch: 0,
+      branch: "feature/add-login",
+      tag: "v1.0.0",
+      branchType: "feature",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      commits: [],
+    };
+
+    mockLoadConfig.mockResolvedValue(mockConfig);
+    mockGetGitInfo.mockResolvedValue(mockGitInfo);
+    mockCalculateVersion.mockReturnValue(mockVersion);
+
+    const result = await gitversion({
+      cwd: "/repo",
+      includeCommits: false,
+    });
+
+    expect(mockLoadConfig).toHaveBeenCalledWith({
+      cwd: "/repo",
+      includeCommits: false,
+    });
+    expect(mockGetGitInfo).toHaveBeenCalledWith(mockConfig, { cwd: "/repo" });
+    expect(mockCalculateVersion).toHaveBeenCalledWith(mockGitInfo, mockConfig, {
+      cwd: "/repo",
+      includeCommits: false,
+    });
+    expect(result).toEqual(mockVersion);
+  });
 });
