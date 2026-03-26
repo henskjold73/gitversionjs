@@ -61,7 +61,7 @@ Options:
 ```ts
 import { gitversion } from "gitversionjs";
 
-const info = await gitversion(); // { version, major, minor, patch, build, ... }
+const info = await gitversion(); // { version, major, minor, patch, branch, tag, branchType, timestamp, commits }
 console.log(info.version); // e.g. "1.2.0.5", "1.3.0.1724329999"
 
 /// optional: target a specific repo directory
@@ -97,7 +97,8 @@ export default {
 - **release/X[.Y[.Z]]**: branch name is authoritative if it contains a version  
   (`release/2` → `2.0.0`, `release/2.1` → `2.1.0`, `release/2.1.3` → `2.1.3`).  
   If not encoded, bump **minor** and reset **patch → 0** from base.
-- **hotfix/X.Y.Z**: branch name is authoritative; otherwise bump **patch**.
+- **hotfix/X[.Y[.Z]]**: branch name is authoritative if it contains a version.  
+  If not encoded, the current implementation keeps the base version and appends `.build`.
 
 > In all cases: bumping **major** resets **minor** & **patch** to `0`; bumping **minor** resets **patch** to `0`.
 
@@ -130,7 +131,7 @@ import { gitversion } from "gitversionjs";
 const info = await gitversion();
 const pkgPath = path.resolve("package.json");
 const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-pkg.version = info.version; // or `${info.major}.${info.minor}.${info.patch}.${info.build}` if you want to include the build number
+pkg.version = info.version;
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
 ```
 

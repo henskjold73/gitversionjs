@@ -101,7 +101,7 @@ describe("calculateVersion", () => {
     const gitInfo: GitInfo = {
       currentBranch: "main",
       tags: ["v1.2.3"],
-      branchType: null,
+      branchType: "main",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
     expect(version.version).toBe("1.2.3.1"); // Includes build number
@@ -160,5 +160,25 @@ describe("calculateVersion", () => {
     };
     const version = calculateVersion(gitInfo, config);
     expect(version.version).toBe("25.3.0.1");
+  });
+
+  it("keeps base version for hotfix branches without an encoded version", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "hotfix/fix-crash",
+      tags: ["v1.2.3"],
+      branchType: "hotfix",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("1.2.3.1");
+  });
+
+  it("uses branch-encoded version for hotfix branches when present", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "hotfix/2.0.1",
+      tags: ["v1.2.3"],
+      branchType: "hotfix",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("2.0.1.1");
   });
 });

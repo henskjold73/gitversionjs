@@ -16,7 +16,7 @@ const mockGetGitInfo = gitModule.getGitInfo as Mock<
   (config: any) => Promise<any>
 >;
 const mockCalculateVersion = versionModule.calculateVersion as unknown as Mock<
-  (info: any, config: any) => string
+  (info: any, config: any) => any
 >;
 
 describe("gitversion (integration)", () => {
@@ -33,14 +33,24 @@ describe("gitversion (integration)", () => {
       tags: ["v1.0.0"],
       branchType: "feature",
     };
-    const mockVersion = "v1.0.0-beta.123";
+    const mockVersion = {
+      version: "1.1.0.123",
+      major: 1,
+      minor: 1,
+      patch: 0,
+      branch: "feature/add-login",
+      tag: "v1.0.0",
+      branchType: "feature",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      commits: ["abc123 test commit"],
+    };
 
     mockLoadConfig.mockResolvedValue(mockConfig);
     mockGetGitInfo.mockResolvedValue(mockGitInfo);
     mockCalculateVersion.mockReturnValue(mockVersion);
 
     const result = await gitversion();
-    expect(result).toBe(mockVersion);
+    expect(result).toEqual(mockVersion);
   });
 
   it("handles empty tags gracefully", async () => {
@@ -50,14 +60,24 @@ describe("gitversion (integration)", () => {
       tags: [],
       branchType: null,
     };
-    const mockVersion = "v0.1.0";
+    const mockVersion = {
+      version: "0.1.0.0",
+      major: 0,
+      minor: 1,
+      patch: 0,
+      branch: "main",
+      tag: null,
+      branchType: null,
+      timestamp: "2026-01-01T00:00:00.000Z",
+      commits: [],
+    };
 
     mockLoadConfig.mockResolvedValue(mockConfig);
     mockGetGitInfo.mockResolvedValue(mockGitInfo);
     mockCalculateVersion.mockReturnValue(mockVersion);
 
     const result = await gitversion();
-    expect(result).toBe("v0.1.0");
+    expect(result).toEqual(mockVersion);
   });
 
   it("handles hotfix branch correctly", async () => {
@@ -67,14 +87,24 @@ describe("gitversion (integration)", () => {
       tags: ["v1.2.3"],
       branchType: "hotfix",
     };
-    const mockVersion = "v1.2.4";
+    const mockVersion = {
+      version: "1.2.3.1",
+      major: 1,
+      minor: 2,
+      patch: 3,
+      branch: "hotfix/fix-crash",
+      tag: "v1.2.3",
+      branchType: "hotfix",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      commits: ["abc123 fix crash"],
+    };
 
     mockLoadConfig.mockResolvedValue(mockConfig);
     mockGetGitInfo.mockResolvedValue(mockGitInfo);
     mockCalculateVersion.mockReturnValue(mockVersion);
 
     const result = await gitversion();
-    expect(result).toBe("v1.2.4");
+    expect(result).toEqual(mockVersion);
   });
 
   it("handles release branch correctly", async () => {
@@ -84,14 +114,24 @@ describe("gitversion (integration)", () => {
       tags: ["v1.2.3"],
       branchType: "release",
     };
-    const mockVersion = "v1.3.0";
+    const mockVersion = {
+      version: "1.3.0.1",
+      major: 1,
+      minor: 3,
+      patch: 0,
+      branch: "release/1.3.0",
+      tag: "v1.2.3",
+      branchType: "release",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      commits: ["abc123 release prep"],
+    };
 
     mockLoadConfig.mockResolvedValue(mockConfig);
     mockGetGitInfo.mockResolvedValue(mockGitInfo);
     mockCalculateVersion.mockReturnValue(mockVersion);
 
     const result = await gitversion();
-    expect(result).toBe("v1.3.0");
+    expect(result).toEqual(mockVersion);
   });
 
   it("handles unknown branch type as stable", async () => {
@@ -101,31 +141,51 @@ describe("gitversion (integration)", () => {
       tags: ["v1.2.3"],
       branchType: null,
     };
-    const mockVersion = "v1.2.3";
+    const mockVersion = {
+      version: "1.2.3.1",
+      major: 1,
+      minor: 2,
+      patch: 3,
+      branch: "main",
+      tag: "v1.2.3",
+      branchType: null,
+      timestamp: "2026-01-01T00:00:00.000Z",
+      commits: ["abc123 stable"],
+    };
 
     mockLoadConfig.mockResolvedValue(mockConfig);
     mockGetGitInfo.mockResolvedValue(mockGitInfo);
     mockCalculateVersion.mockReturnValue(mockVersion);
 
     const result = await gitversion();
-    expect(result).toBe("v1.2.3");
+    expect(result).toEqual(mockVersion);
   });
 
-  it("handles develop branch as stable version", async () => {
+  it("passes through develop branch output from the version calculator", async () => {
     const mockConfig = { tagPrefix: "v" };
     const mockGitInfo = {
       currentBranch: "develop",
       tags: ["v1.2.3"],
-      branchType: null,
+      branchType: "develop",
     };
-    const mockVersion = "v1.2.3";
+    const mockVersion = {
+      version: "1.3.0.2",
+      major: 1,
+      minor: 3,
+      patch: 0,
+      branch: "develop",
+      tag: "v1.2.3",
+      branchType: "develop",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      commits: ["abc123 develop"],
+    };
 
     mockLoadConfig.mockResolvedValue(mockConfig);
     mockGetGitInfo.mockResolvedValue(mockGitInfo);
     mockCalculateVersion.mockReturnValue(mockVersion);
 
     const result = await gitversion();
-    expect(result).toBe("v1.2.3");
+    expect(result).toEqual(mockVersion);
   });
 
   it("passes develop branch to the version calculator", async () => {
@@ -138,11 +198,21 @@ describe("gitversion (integration)", () => {
 
     mockLoadConfig.mockResolvedValue(mockConfig);
     mockGetGitInfo.mockResolvedValue(mockGitInfo);
-    mockCalculateVersion.mockReturnValue("v1.3.0"); // whatever your scheme returns
+    mockCalculateVersion.mockReturnValue({
+      version: "1.3.0.1",
+      major: 1,
+      minor: 3,
+      patch: 0,
+      branch: "develop",
+      tag: "1.2.3",
+      branchType: "develop",
+      timestamp: "2026-01-01T00:00:00.000Z",
+      commits: ["abc123 develop"],
+    });
 
     const result = await gitversion();
 
     expect(mockCalculateVersion).toHaveBeenCalledWith(mockGitInfo, mockConfig);
-    expect(result).toBe("v1.3.0");
+    expect(result.version).toBe("1.3.0.1");
   });
 });
