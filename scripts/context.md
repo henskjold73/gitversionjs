@@ -18,6 +18,7 @@ This script:
 - `dist/cli.js` already exists, so CI must build before running this script
 - the current checkout has Git tags available locally
 - the CLI returns valid JSON with a `version` field
+- it rewrites the root `package.json`; this is expected in CI but should be handled carefully in local worktrees
 
 ## Why It Exists
 
@@ -28,3 +29,4 @@ The package version published to npm is aligned with the computed Git-derived ve
 - If CLI output shape changes, this script breaks
 - If build artifacts are missing, CI publish flow breaks
 - If the computed version format changes, npm package versioning behavior changes too
+- If npm ever rejects the four-part version format, this script/release flow will be the place where that failure appears

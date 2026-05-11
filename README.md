@@ -148,6 +148,21 @@ fs.writeFileSync(
 
 ---
 
+## Project documentation
+
+Maintainer and implementation notes live in `docs/`:
+
+- [`docs/architecture.md`](docs/architecture.md): runtime flow and module responsibilities
+- [`docs/versioning-rules.md`](docs/versioning-rules.md): exact branch, tag, and build-number behavior
+- [`docs/development.md`](docs/development.md): local setup, validation, and packaging checks
+- [`docs/github.md`](docs/github.md): current GitHub project and release documentation status
+
+The repository also has small `context.md` files at the root and in important
+folders. Those are working notes for future maintenance sessions and should be
+kept in sync when behavior changes.
+
+---
+
 ## Install options
 
 - **Global CLI**:

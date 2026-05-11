@@ -5,6 +5,9 @@ node_modules/
 dist/
 build/
 
+# npm package artifacts
+*.tgz
+
 # TypeScript cache
 *.tsbuildinfo
 

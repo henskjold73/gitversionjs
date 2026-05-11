@@ -86,7 +86,7 @@ Small, boring PRs get merged faster than clever ones.
 ## CI & releases (maintainer notes)
 
 - CI runs on every push to main
-- Publishing to npm is done manually via GitHub Actions
+- Publishing to npm is moving to GitHub and should be documented before the next release
 - Not every commit is a release, and that is intentional
 
 If you’re not a maintainer, you don’t need to worry about this part.

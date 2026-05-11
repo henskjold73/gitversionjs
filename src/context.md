@@ -48,6 +48,7 @@ Important details:
 - Tags are sorted numerically after stripping the configured prefix
 - Commit count is computed from `latestTag..HEAD`
 - `includeCommits` controls whether the commit list is collected, not whether the build count exists
+- Branch-encoded versions are parsed only for `release/*` and `hotfix/*` shapes that contain numeric versions
 
 If you change semantics, update tests and `README.md` together.
 
@@ -63,3 +64,4 @@ If you change semantics, update tests and `README.md` together.
 - `version.ts` mixes pure version math with direct Git command execution for commit history
 - `git.ts` branch normalization has CI-specific behavior that is easy to regress in detached HEAD builds
 - `tsconfig.json` excludes tests from build output, so only source files in `src/` ship to `dist/`
+- CLI text output deliberately avoids collecting commit messages; JSON output includes them unless `--no-include-commits` is passed

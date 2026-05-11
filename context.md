@@ -15,7 +15,7 @@ The computed version format is currently `major.minor.patch.build`, where `build
 
 - `src/`: core library, CLI, and tests
 - `scripts/`: repo maintenance helpers used by CI
-- `pipeline/`: Azure Pipelines publish flow
+- `docs/`: maintainer documentation for architecture, versioning, development, and GitHub project state
 - top-level `README.md`: user-facing behavior and examples
 
 ## Important Runtime Flow
@@ -42,9 +42,21 @@ The computed version format is currently `major.minor.patch.build`, where `build
 
 ## Current Friction To Keep In Mind
 
-- Some tests mock `calculateVersion()` as a string-returning function even though the implementation returns a full object.
 - `README.md` describes branch handling slightly more cleanly than the tests do; trust implementation over older assertions.
 - `scripts/update-package-version.mjs` rewrites `package.json` from built CLI output, so build order matters in CI.
+- A local `gitversionjs-1.1.0.tgz` exists and is currently untracked; do not assume it should be committed.
+- Project has moved from Azure DevOps to GitHub. The old Azure pipeline files were removed.
+- npm deployment still needs a dedicated GitHub runbook/workflow covering token setup, approval ownership, version/tag expectations, and release verification.
+
+## Documentation Added
+
+- `docs/architecture.md`
+- `docs/versioning-rules.md`
+- `docs/development.md`
+- `docs/github.md`
+- `docs/context.md`
+
+Keep these docs, the README, and tests aligned when behavior changes.
 
 ## Useful Commands
 
