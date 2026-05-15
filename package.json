@@ -1,6 +1,6 @@
 {
   "name": "gitversionjs",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Auto-generates SemVer versions from Git tags and branches, GitFlow-style.",
   "repository": {
     "type": "git",
@@ -27,7 +27,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "gitversionjs": "./dist/cli.js"
+    "gitversionjs": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
