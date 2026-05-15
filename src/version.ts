@@ -36,22 +36,69 @@ function parseVersionFromTag(
   return [maj, min, pat];
 }
 
+function toVersionNumber(value: string | undefined): number {
+  if (!value) return 0;
+  return Number(value.replace(/^v/i, "")) || 0;
+}
+
+function parseVersionLike(value: string): [number, number, number] | null {
+  const m = value.match(/v?(\d+)(?:[.-](\d+))?(?:[.-](\d+))?$/i);
+  if (!m) return null;
+  return [toVersionNumber(m[1]), toVersionNumber(m[2]), toVersionNumber(m[3])];
+}
+
+function regexFromConfig(regex: string | RegExp | undefined): RegExp | null {
+  if (!regex) return null;
+  if (typeof regex === "string") return new RegExp(regex);
+  return new RegExp(regex.source, regex.flags.replace(/[gy]/g, ""));
+}
+
+function parseVersionFromRegexMatch(
+  match: RegExpMatchArray
+): [number, number, number] | null {
+  const groups = match.groups;
+  if (groups?.major) {
+    return [
+      toVersionNumber(groups.major),
+      toVersionNumber(groups.minor),
+      toVersionNumber(groups.patch),
+    ];
+  }
+
+  const captures = match.slice(1).filter((value) => value !== undefined);
+  if (captures.length === 0) return null;
+  if (captures.length === 1) return parseVersionLike(captures[0]);
+
+  return [
+    toVersionNumber(captures[0]),
+    toVersionNumber(captures[1]),
+    toVersionNumber(captures[2]),
+  ];
+}
+
 // Supports:
 //   release/2.2.0  → 2.2.0
 //   release/2.2    → 2.2.0
 //   release/2      → 2.0.0
 // Same for hotfix/* (hotfix/1.2.3 etc.)
 function parseVersionFromBranch(
-  branch: string
+  branch: string,
+  branchRegex?: string | RegExp
 ): [number, number, number] | null {
+  const configuredRegex = regexFromConfig(branchRegex);
+  if (configuredRegex) {
+    const configuredMatch = branch.match(configuredRegex);
+    if (configuredMatch) {
+      const configuredVersion = parseVersionFromRegexMatch(configuredMatch);
+      if (configuredVersion) return configuredVersion;
+    }
+  }
+
   const m = branch.match(
     /^(?:release|hotfix)\/(v?\d+)(?:\.(\d+))?(?:\.(\d+))?$/
   );
   if (!m) return null;
-  const major = Number(m[1].replace(/^v/, "")) || 0;
-  const minor = m[2] ? Number(m[2]) || 0 : 0;
-  const patch = m[3] ? Number(m[3]) || 0 : 0;
-  return [major, minor, patch];
+  return [toVersionNumber(m[1]), toVersionNumber(m[2]), toVersionNumber(m[3])];
 }
 
 function sortTagsDesc(tags: string[], prefix: string): string[] {
@@ -108,11 +155,11 @@ export function calculateVersion(
   options: { cwd?: string; includeCommits?: boolean } = {}
 ): GitVersionInfo {
   const { tags, branchType, currentBranch } = gitInfo;
-  const { tagPrefix = "v" } = config;
+  const { tagPrefix = "v", branchRegex } = config;
   const { cwd = process.cwd(), includeCommits = true } = options;
 
   // Base: branch-encoded version > latest tag > default
-  const branchVer = parseVersionFromBranch(currentBranch);
+  const branchVer = parseVersionFromBranch(currentBranch, branchRegex);
   const latestTag = sortTagsDesc(tags, tagPrefix)[0] ?? null;
   const tagged = latestTag ? parseVersionFromTag(latestTag, tagPrefix) : null;
   const [baseMajor, baseMinor, basePatch] = branchVer ?? tagged ?? [0, 1, 0];

@@ -43,6 +43,7 @@ Default config:
     release: "release/",
     hotfix: "hotfix/",
   },
+  branchRegex: undefined,
 }
 ```
 
@@ -68,8 +69,8 @@ tags from `git tag --list`.
 ### `src/version.ts`
 
 Owns the version rules. It parses tags, parses branch-encoded versions for
-`release/*` and `hotfix/*`, sorts tags numerically, and builds the final
-`GitVersionInfo`.
+`release/*` and `hotfix/*`, applies optional configured branch regex captures,
+sorts tags numerically, and builds the final `GitVersionInfo`.
 
 The current version format is:
 

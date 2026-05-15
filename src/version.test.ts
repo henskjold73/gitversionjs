@@ -190,6 +190,59 @@ describe("calculateVersion", () => {
     expect(version.version).toBe("2.0.1.1");
   });
 
+  it("uses configured branch regex when no tags exist", () => {
+    const config: GitVersionConfig = {
+      ...defaultConfig,
+      tagPrefix: "",
+      branchRegex: /^(?:hotfix|release)\/R(\d+)-(\d+)\.(\d+)$/,
+    };
+
+    for (const branchType of ["hotfix", "release"] as const) {
+      const gitInfo: GitInfo = {
+        currentBranch: `${branchType}/R2026-1.5`,
+        tags: [],
+        branchType,
+      };
+      const version = calculateVersion(gitInfo, config);
+      expect(version.version).toBe("2026.1.5.0");
+      expect(version.tag).toBeNull();
+    }
+  });
+
+  it("uses configured branch regex with named version groups", () => {
+    const config: GitVersionConfig = {
+      ...defaultConfig,
+      tagPrefix: "",
+      branchRegex: "^(?:hotfix|release)/R\\d+-(?<major>\\d+)\\.(?<minor>\\d+)$",
+    };
+    const gitInfo: GitInfo = {
+      currentBranch: "release/R2026-1.5",
+      tags: [],
+      branchType: "release",
+    };
+    const version = calculateVersion(gitInfo, config);
+    expect(version.version).toBe("1.5.0.0");
+  });
+
+  it("can extract a two-digit year version from hotfix branch names", () => {
+    const config: GitVersionConfig = {
+      ...defaultConfig,
+      tagPrefix: "",
+      branchRegex: /^(?:hotfix|release)\/R20(\d+)-(\d+)\.(\d+)$/,
+    };
+
+    for (const branchType of ["hotfix", "release"] as const) {
+      const gitInfo: GitInfo = {
+        currentBranch: `${branchType}/R2026-1.5`,
+        tags: [],
+        branchType,
+      };
+      const version = calculateVersion(gitInfo, config);
+      expect(version.version).toBe("26.1.5.0");
+      expect([version.major, version.minor, version.patch]).toEqual([26, 1, 5]);
+    }
+  });
+
   it("uses branch-encoded version for release branches with partial versions", () => {
     const gitInfo: GitInfo = {
       currentBranch: "release/2.1",

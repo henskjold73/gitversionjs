@@ -7,6 +7,7 @@ import { pathToFileURL } from "url";
 export interface GitVersionConfig {
   tagPrefix?: string;
   branchPrefixes?: Record<string, string>;
+  branchRegex?: string | RegExp;
 }
 
 const defaultConfig: GitVersionConfig = {
@@ -51,6 +52,13 @@ export async function loadConfig(
       !Array.isArray(rawConfig.branchPrefixes)
     ) {
       validatedConfig.branchPrefixes = rawConfig.branchPrefixes;
+    }
+
+    if (
+      typeof rawConfig.branchRegex === "string" ||
+      rawConfig.branchRegex instanceof RegExp
+    ) {
+      validatedConfig.branchRegex = rawConfig.branchRegex;
     }
 
     return {

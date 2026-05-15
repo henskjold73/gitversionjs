@@ -85,6 +85,9 @@ export default {
     release: "release/",
     hotfix: "hotfix/",
   },
+  // Optional: extract a version from custom branch names.
+  // Numeric capture groups become major, minor, patch.
+  branchRegex: /^(?:hotfix|release)\/R(\d+)-(\d+)\.(\d+)$/,
 };
 ```
 
@@ -99,6 +102,11 @@ export default {
   If not encoded, bump **minor** and reset **patch → 0** from base.
 - **hotfix/X[.Y[.Z]]**: branch name is authoritative if it contains a version.  
   If not encoded, the current implementation keeps the base version and appends `.build`.
+- **Custom branch regex**: when `branchRegex` matches, its numeric capture groups are used as
+  `major.minor.patch` before falling back to tags or `0.1.0`. For example,
+  `branchRegex: /^(?:hotfix|release)\/R(\d+)-(\d+)\.(\d+)$/` turns
+  `hotfix/R2026-1.5` or `release/R2026-1.5` into `2026.1.5.0` when no tag
+  exists.
 
 > In all cases: bumping **major** resets **minor** & **patch** to `0`; bumping **minor** resets **patch** to `0`.
 

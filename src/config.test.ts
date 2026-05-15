@@ -47,6 +47,20 @@ describe("loadConfig", () => {
     expect(config.branchPrefixes).toEqual(customConfig.branchPrefixes);
   });
 
+  it("loads custom branch regex", async () => {
+    const filePath = await writeTempConfig(
+      "branch-regex-config.js",
+      `export default { branchRegex: /^(?:hotfix|release)\\/R(\\d+)-(\\d+)\\.(\\d+)$/ };`
+    );
+    const config = await loadConfig(filePath);
+    expect(config.branchRegex).toBeInstanceOf(RegExp);
+    expect("release/R2026-1.5".match(config.branchRegex as RegExp)?.slice(1)).toEqual([
+      "2026",
+      "1",
+      "5",
+    ]);
+  });
+
   it("merges partial config with defaults", async () => {
     const partialConfig = { tagPrefix: "partial-" };
     const filePath = await writeTempConfig(

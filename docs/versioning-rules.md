@@ -51,6 +51,18 @@ Branch-encoded versions support:
 
 The parser also allows a leading `v` in those branch versions.
 
+Config can also provide `branchRegex` as a `RegExp` or string pattern. When it
+matches the current branch, numeric captures are interpreted as `major`,
+`minor`, and `patch`. Named captures `major`, `minor`, and `patch` are also
+supported.
+
+Examples:
+
+- `branchRegex: /^(?:hotfix|release)\/R(\d+)-(\d+)\.(\d+)$/` with
+  `hotfix/R2026-1.5` or `release/R2026-1.5` -> `2026.1.5`
+- `branchRegex: "^(?:hotfix|release)/R\\d+-(?<major>\\d+)\\.(?<minor>\\d+)$"`
+  with `release/R2026-1.5` -> `1.5.0`
+
 ## Tag Sorting
 
 Tags are sorted numerically, not lexically. For example, `v1.10.0` is newer
