@@ -99,6 +99,8 @@ export default {
   (e.g. `1.2.3` → `1.3.0.5`).
 - **release/X[.Y[.Z]]**: branch name is authoritative if it contains a version  
   (`release/2` → `2.0.0`, `release/2.1` → `2.1.0`, `release/2.1.3` → `2.1.3`).  
+  Release-year names like `release/R2026-2.0` are also authoritative and resolve
+  to `26.2.0`.
   If not encoded, bump **minor** and reset **patch → 0** from base.
 - **hotfix/X[.Y[.Z]]**: branch name is authoritative if it contains a version.  
   If not encoded, the current implementation keeps the base version and appends `.build`.

@@ -190,6 +190,17 @@ describe("calculateVersion", () => {
     expect(version.version).toBe("2.0.1.1");
   });
 
+  it("uses default release-year branch names as branch-encoded versions", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "release/R2026-2.0",
+      tags: ["26.2.0"],
+      branchType: "release",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("26.2.0.1");
+    expect([version.major, version.minor, version.patch]).toEqual([26, 2, 0]);
+  });
+
   it("uses configured branch regex when no tags exist", () => {
     const config: GitVersionConfig = {
       ...defaultConfig,

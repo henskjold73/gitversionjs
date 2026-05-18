@@ -45,11 +45,13 @@ Branch-encoded versions support:
 - `release/2` -> `2.0.0`
 - `release/2.1` -> `2.1.0`
 - `release/2.1.3` -> `2.1.3`
+- `release/R2026-2.0` -> `26.2.0`
 - `hotfix/2` -> `2.0.0`
 - `hotfix/2.1` -> `2.1.0`
 - `hotfix/2.1.3` -> `2.1.3`
+- `hotfix/R2026-2.0` -> `26.2.0`
 
-The parser also allows a leading `v` in those branch versions.
+The parser also allows a leading `v` in numeric branch versions.
 
 Config can also provide `branchRegex` as a `RegExp` or string pattern. When it
 matches the current branch, numeric captures are interpreted as `major`,

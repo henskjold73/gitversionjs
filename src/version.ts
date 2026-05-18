@@ -80,6 +80,7 @@ function parseVersionFromRegexMatch(
 //   release/2.2.0  → 2.2.0
 //   release/2.2    → 2.2.0
 //   release/2      → 2.0.0
+//   release/R2026-2.0 → 26.2.0
 // Same for hotfix/* (hotfix/1.2.3 etc.)
 function parseVersionFromBranch(
   branch: string,
@@ -92,6 +93,17 @@ function parseVersionFromBranch(
       const configuredVersion = parseVersionFromRegexMatch(configuredMatch);
       if (configuredVersion) return configuredVersion;
     }
+  }
+
+  const releaseYearMatch = branch.match(
+    /^(?:release|hotfix)\/R20(\d{2})-(\d+)\.(\d+)$/
+  );
+  if (releaseYearMatch) {
+    return [
+      toVersionNumber(releaseYearMatch[1]),
+      toVersionNumber(releaseYearMatch[2]),
+      toVersionNumber(releaseYearMatch[3]),
+    ];
   }
 
   const m = branch.match(
