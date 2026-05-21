@@ -20,6 +20,8 @@ describe("loadConfig", () => {
   it("returns default config when file is missing", async () => {
     const config = await loadConfig("nonexistent.js");
     expect(config.tagPrefix).toBe("v");
+    expect(config.strategy).toBe("gitflow");
+    expect(config.bump).toEqual(["develop", "feature"]);
     expect(config.branchPrefixes).toEqual({
       main: "main",
       develop: "develop",
@@ -31,9 +33,56 @@ describe("loadConfig", () => {
     });
   });
 
+  it("loads branch rules and strategy", async () => {
+    const filePath = await writeTempConfig(
+      "branch-rules-config.js",
+      `export default {
+        strategy: "github-flow",
+        branchRules: [
+          { name: "main", match: { exact: "main" }, increment: "none" },
+          { name: "feature", match: { prefix: "feature/" }, increment: "minor", base: ["tag", "default"], sourceAware: true },
+          { name: "maintenance", match: { regex: /^support\\// }, increment: "patch" }
+        ]
+      };`
+    );
+
+    const config = await loadConfig(filePath);
+
+    expect(config.strategy).toBe("github-flow");
+    expect(config.branchRules).toHaveLength(3);
+    expect(config.branchRules?.[1]).toMatchObject({
+      name: "feature",
+      increment: "minor",
+      base: ["tag", "default"],
+      sourceAware: true,
+    });
+    expect(
+      typeof config.branchRules?.[2].match === "object" &&
+        config.branchRules[2].match.regex
+    ).toBeInstanceOf(RegExp);
+  });
+
+  it("ignores invalid branch rules and strategy", async () => {
+    const filePath = await writeTempConfig(
+      "invalid-branch-rules-config.js",
+      `export default {
+        strategy: "unknown",
+        branchRules: [
+          { name: "feature", match: { prefix: "feature/" }, increment: "banana" }
+        ]
+      };`
+    );
+
+    const config = await loadConfig(filePath);
+
+    expect(config.strategy).toBe("gitflow");
+    expect(config.branchRules).toBeUndefined();
+  });
+
   it("loads full custom config", async () => {
     const customConfig: GitVersionConfig = {
       tagPrefix: "custom-",
+      bump: ["dev", "feature/", "hotfix"],
       branchPrefixes: {
         feature: "feat/",
         release: "rel/",
@@ -46,6 +95,7 @@ describe("loadConfig", () => {
     );
     const config = await loadConfig(filePath);
     expect(config.tagPrefix).toBe("custom-");
+    expect(config.bump).toEqual(customConfig.bump);
     expect(config.branchPrefixes).toEqual(customConfig.branchPrefixes);
   });
 

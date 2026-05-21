@@ -21,6 +21,10 @@ Loads user config with dynamic ESM import and merges valid keys onto defaults:
 
 - `tagPrefix`
 - `branchPrefixes`
+- `branchRegex`
+- `bump`
+- `strategy`
+- `branchRules`
 
 Malformed or missing config falls back to defaults.
 
@@ -45,7 +49,9 @@ This is the real behavior center.
 
 Important details:
 
-- Base version priority is current branch-encoded version, then inferred source branch-encoded version, then latest valid tag, then `0.1.0`
+- Branch behavior is resolved through custom `branchRules`, compatibility `bump` rules, then strategy preset rules
+- Base version priority defaults to current branch-encoded version, then inferred source branch-encoded version, then latest valid tag, then `0.1.0`
+- Branch rules can override base priority and apply `none`, `patch`, `minor`, or `major` increments
 - Tags are sorted numerically after stripping the configured prefix
 - Commit count is computed from `latestTag..HEAD`
 - `includeCommits` controls whether the commit list is collected, not whether the build count exists

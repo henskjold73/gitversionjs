@@ -4,6 +4,16 @@ import { LoadConfigOptions, loadConfig } from "./config.js";
 import { getGitInfo } from "./git.js";
 import { calculateVersion, GitVersionInfo } from "./version.js";
 
+export type {
+  BranchingStrategy,
+  BranchRule,
+  BranchRuleBase,
+  BranchRuleIncrement,
+  BranchRuleMatch,
+  GitVersionConfig,
+} from "./config.js";
+export type { GitVersionInfo } from "./version.js";
+
 export type GitVersionOptions = LoadConfigOptions & {
   includeCommits?: boolean;
 };

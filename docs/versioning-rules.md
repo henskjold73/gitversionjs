@@ -34,11 +34,15 @@ With `tagPrefix: ""`, unprefixed numeric tags such as `1.2.3` are valid.
 
 ## Base Version Priority
 
-`calculateVersion()` chooses the base version in this order:
+By default, `calculateVersion()` chooses the base version in this order:
 
-1. branch-encoded version from `release/*` or `hotfix/*`
-2. latest valid reachable tag
-3. default base `0.1.0`
+1. branch-encoded version from `release/*`, `hotfix/*`, or `support/*`
+2. source branch-encoded version, when a source branch is inferred
+3. latest valid reachable tag
+4. default base `0.1.0`
+
+Custom `branchRules` can override this priority with a `base` list containing
+`branch`, `sourceBranch`, `tag`, and `default`.
 
 Branch-encoded versions support:
 
@@ -74,6 +78,30 @@ Only tags returned by Git discovery and accepted by the configured prefix are
 considered.
 
 ## Branch Behavior
+
+Branch behavior is resolved through ordered rules. Custom `branchRules` match
+first, then compatibility `bump` rules, then the selected strategy preset. The
+default strategy is `gitflow`, which preserves the historical behavior below.
+
+Rules can match by exact branch name, branch prefix, regex, or discovered branch
+type:
+
+```js
+export default {
+  branchRules: [
+    { name: "next", match: { exact: "next" }, increment: "minor" },
+    { name: "breaking", match: { prefix: "breaking/" }, increment: "major" },
+    { name: "preview", match: { regex: "^preview/" }, increment: "patch" },
+    { name: "release", match: { type: "release" }, increment: "none" },
+  ],
+};
+```
+
+Supported increments are `none`, `patch`, `minor`, and `major`. A major
+increment resets minor and patch to `0`; a minor increment resets patch to `0`.
+
+Built-in strategies are `gitflow`, `github-flow`, `trunk-based`,
+`gitlab-flow`, and `release-train`.
 
 ### `main`
 

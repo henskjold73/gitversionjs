@@ -22,22 +22,21 @@ The computed version format is currently `major.minor.patch.build`, where `build
 
 1. `gitversion()` in `src/index.ts` loads config from `.gitversion.config.js`
 2. `getGitInfo()` in `src/git.ts` reads current branch and matching tags
-3. `calculateVersion()` in `src/version.ts` selects a base version and appends the build number
+3. `calculateVersion()` in `src/version.ts` resolves a branch rule, selects a base version, applies any increment, and appends the build number
 4. `src/cli.ts` prints either plain text or JSON
 
 ## Branch Rules In Code
 
-- `main`: uses base version and appends commit count
-- `develop`: bumps patch, appends commit count
-- `feature/*`: same as `develop`, using an inferred versioned source branch as base when available
-- `bugfix/*`: uses an inferred versioned source branch as base when available, otherwise keeps base version
-- `release/*`: branch version wins if encoded in branch name, otherwise keeps base version
-- `hotfix/*`: branch version wins if encoded in branch name, otherwise keeps base version and appends commit count
-- `support/*`: branch version wins if encoded in branch name, otherwise uses an inferred versioned source branch as base when available
+- Branch behavior now goes through ordered rules: custom `branchRules`, compatibility `bump` rules, then a strategy preset.
+- The default strategy is `gitflow` and preserves historical behavior.
+- Built-in strategies are `gitflow`, `github-flow`, `trunk-based`, `gitlab-flow`, and `release-train`.
+- Rules can match exact names, prefixes, regexes, or inferred branch types; increments are `none`, `patch`, `minor`, and `major`.
+- Rule base priority can use branch-encoded versions, inferred source branch versions, tags, and the default `0.1.0`.
 
 ## Operational Notes
 
 - Config is optional and loaded from `.gitversion.config.js` in the target repo root.
+- Legacy `branchPrefixes`, `bump`, and `branchRegex` config remain supported.
 - Only tags matching the configured prefix and a numeric `X`, `X.Y`, or `X.Y.Z` shape are considered.
 - CI and detached HEAD support depend partly on environment-variable fallback in `src/git.ts`.
 - Source branch detection for `feature/*`, `bugfix/*`, and `support/*` depends on available local or remote refs.

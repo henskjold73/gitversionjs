@@ -87,6 +87,191 @@ describe("calculateVersion", () => {
     expect(version.version).toBe("1.2.4.1"); // Includes build number
   });
 
+  it("uses the default bump config when bump is not set", () => {
+    const config: GitVersionConfig = {
+      tagPrefix: "v",
+      branchPrefixes: defaultConfig.branchPrefixes,
+    };
+    const gitInfo: GitInfo = {
+      currentBranch: "develop",
+      tags: ["v1.2.3"],
+      branchType: "develop",
+    };
+
+    const version = calculateVersion(gitInfo, config);
+
+    expect(version.version).toBe("1.2.4.1");
+  });
+
+  it("only bumps configured branch types", () => {
+    const config: GitVersionConfig = {
+      ...defaultConfig,
+      bump: ["hotfix"],
+    };
+
+    const developVersion = calculateVersion(
+      {
+        currentBranch: "develop",
+        tags: ["v1.2.3"],
+        branchType: "develop",
+      },
+      config
+    );
+    const hotfixVersion = calculateVersion(
+      {
+        currentBranch: "hotfix/fix-crash",
+        tags: ["v1.2.3"],
+        branchType: "hotfix",
+      },
+      config
+    );
+
+    expect(developVersion.version).toBe("1.2.3.1");
+    expect(hotfixVersion.version).toBe("1.2.4.1");
+  });
+
+  it("bumps branches by configured branch name prefix", () => {
+    const config: GitVersionConfig = {
+      ...defaultConfig,
+      bump: ["dev", "feature/"],
+    };
+
+    const devVersion = calculateVersion(
+      {
+        currentBranch: "dev",
+        tags: ["v1.2.3"],
+        branchType: null,
+      },
+      config
+    );
+    const featureVersion = calculateVersion(
+      {
+        currentBranch: "feature/add-login",
+        tags: ["v1.2.3"],
+        branchType: null,
+      },
+      config
+    );
+    const hotfixVersion = calculateVersion(
+      {
+        currentBranch: "hotfix/fix-crash",
+        tags: ["v1.2.3"],
+        branchType: null,
+      },
+      config
+    );
+
+    expect(devVersion.version).toBe("1.2.4.1");
+    expect(featureVersion.version).toBe("1.2.4.1");
+    expect(hotfixVersion.version).toBe("1.2.3.1");
+  });
+
+  it("uses custom branch rules before compatibility bump rules", () => {
+    const config: GitVersionConfig = {
+      ...defaultConfig,
+      branchRules: [
+        {
+          name: "develop-minor",
+          match: { type: "develop" },
+          increment: "minor",
+        },
+      ],
+    };
+    const gitInfo: GitInfo = {
+      currentBranch: "develop",
+      tags: ["v1.2.3"],
+      branchType: "develop",
+    };
+
+    const version = calculateVersion(gitInfo, config);
+
+    expect(version.version).toBe("1.3.0.1");
+    expect(version.rule).toBe("develop-minor");
+    expect(version.increment).toBe("minor");
+    expect(version.baseVersion).toBe("1.2.3");
+    expect(version.baseSource).toBe("tag");
+  });
+
+  it("supports major and minor increments from branch rules", () => {
+    const minorVersion = calculateVersion(
+      {
+        currentBranch: "next",
+        tags: ["v1.2.3"],
+        branchType: null,
+      },
+      {
+        ...defaultConfig,
+        branchRules: [
+          { name: "next", match: { exact: "next" }, increment: "minor" },
+        ],
+      }
+    );
+    const majorVersion = calculateVersion(
+      {
+        currentBranch: "breaking/api",
+        tags: ["v1.2.3"],
+        branchType: null,
+      },
+      {
+        ...defaultConfig,
+        branchRules: [
+          { name: "breaking", match: { prefix: "breaking/" }, increment: "major" },
+        ],
+      }
+    );
+
+    expect(minorVersion.version).toBe("1.3.0.1");
+    expect(majorVersion.version).toBe("2.0.0.1");
+  });
+
+  it("lets branch rules choose base version priority", () => {
+    const config: GitVersionConfig = {
+      ...defaultConfig,
+      branchRules: [
+        {
+          name: "release-from-tag",
+          match: { type: "release" },
+          base: ["tag", "default"],
+          increment: "patch",
+        },
+      ],
+    };
+    const gitInfo: GitInfo = {
+      currentBranch: "release/9.0.0",
+      tags: ["v1.2.3"],
+      branchType: "release",
+    };
+
+    const version = calculateVersion(gitInfo, config);
+
+    expect(version.version).toBe("1.2.4.1");
+    expect(version.baseSource).toBe("tag");
+  });
+
+  it("supports named strategy presets", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "bugfix/fix-crash",
+      tags: ["v1.2.3"],
+      branchType: "bugfix",
+    };
+
+    const gitflowVersion = calculateVersion(gitInfo, {
+      ...defaultConfig,
+      strategy: "gitflow",
+      bump: [],
+    });
+    const githubFlowVersion = calculateVersion(gitInfo, {
+      ...defaultConfig,
+      strategy: "github-flow",
+      bump: [],
+    });
+
+    expect(gitflowVersion.version).toBe("1.2.3.1");
+    expect(githubFlowVersion.version).toBe("1.2.4.1");
+    expect(githubFlowVersion.strategy).toBe("github-flow");
+    expect(githubFlowVersion.rule).toBe("bugfix");
+  });
+
   it("uses branch encoded version for release branch", () => {
     const gitInfo: GitInfo = {
       currentBranch: "release/1.3.0",

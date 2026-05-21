@@ -36,6 +36,8 @@ Default config:
 ```ts
 {
   tagPrefix: "v",
+  strategy: "gitflow",
+  bump: ["develop", "feature"],
   branchPrefixes: {
     main: "main",
     develop: "develop",
@@ -45,6 +47,7 @@ Default config:
     hotfix: "hotfix/",
     support: "support/",
   },
+  branchRules: undefined,
   branchRegex: undefined,
 }
 ```
@@ -73,8 +76,15 @@ tags from `git tag --list`.
 
 Owns the version rules. It parses tags, parses branch-encoded versions for
 `release/*`, `hotfix/*`, and `support/*`, applies optional configured branch
-regex captures, sorts tags numerically, applies source branch context when
-available, and builds the final `GitVersionInfo`.
+regex captures, sorts tags numerically, resolves the first matching branch rule,
+applies source branch context when available, and builds the final
+`GitVersionInfo`.
+
+Branch rules are resolved in this order:
+
+1. custom `branchRules`
+2. compatibility rules generated from `bump`
+3. built-in strategy preset rules
 
 The current version format is:
 
@@ -111,6 +121,11 @@ type GitVersionInfo = {
   sourceBranch: string | null;
   tag: string | null;
   branchType: string | null;
+  strategy?: string;
+  rule?: string | null;
+  baseVersion?: string;
+  baseSource?: "branch" | "sourceBranch" | "tag" | "default";
+  increment?: "none" | "patch" | "minor" | "major";
   timestamp: string;
   commits: string[];
 };

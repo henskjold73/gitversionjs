@@ -78,6 +78,9 @@ Create a `.gitversion.config.js` in your repo root (ESM):
 /** @type {import('gitversionjs').GitVersionConfig} */
 export default {
   tagPrefix: "v", // e.g. "v1.2.3" → strip "v"
+  // Branch types or branch name prefixes that should bump patch.
+  // Defaults to ["develop", "feature"] when omitted.
+  bump: ["develop", "feature"],
   branchPrefixes: {
     main: "main",
     develop: "develop",
@@ -90,6 +93,15 @@ export default {
   // Optional: extract a version from custom branch names.
   // Numeric capture groups become major, minor, patch.
   branchRegex: /^(?:hotfix|release)\/R(\d+)-(\d+)\.(\d+)$/,
+  // Optional strategy presets: "gitflow" (default), "github-flow",
+  // "trunk-based", "gitlab-flow", or "release-train".
+  strategy: "gitflow",
+  // Optional rule overrides. First matching rule wins.
+  branchRules: [
+    { name: "next", match: { exact: "next" }, increment: "minor" },
+    { name: "breaking", match: { prefix: "breaking/" }, increment: "major" },
+    { name: "preview", match: { regex: "^preview/" }, increment: "patch" },
+  ],
 };
 ```
 
@@ -99,6 +111,16 @@ export default {
 - **main**: exactly the base tag, with `.build` appended (e.g., `1.2.3.5`).
 - **develop**/**feature/**: bump **patch**, append `.build` (commit count)  
   (e.g. `1.2.3` → `1.2.4.5`).
+- **Configurable bumping**: set `bump` to the branch types or branch name
+  prefixes that should bump patch, for example `["dev", "feature/", "hotfix"]`.
+  Branches not matched by `bump` keep the base version and append `.build`.
+- **Configurable branch rules**: set `branchRules` for exact, prefix, regex, or
+  branch-type matching. Rules can increment `major`, `minor`, `patch`, or
+  `none`, and can choose base priority from `branch`, `sourceBranch`, `tag`, and
+  `default`.
+- **Strategy presets**: set `strategy` to `gitflow`, `github-flow`,
+  `trunk-based`, `gitlab-flow`, or `release-train`. Custom `branchRules` are
+  evaluated before preset rules.
 - **release/X[.Y[.Z]]**: branch name is authoritative if it contains a version  
   (`release/2` → `2.0.0`, `release/2.1` → `2.1.0`, `release/2.1.3` → `2.1.3`).  
   Release-year names like `release/R2026-2.0` are also authoritative and resolve
