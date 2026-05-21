@@ -16,8 +16,10 @@ const defaultConfig: GitVersionConfig = {
     main: "main",
     develop: "develop",
     feature: "feature/",
+    bugfix: "bugfix/",
     release: "release/",
     hotfix: "hotfix/",
+    support: "support/",
   },
 };
 

@@ -28,16 +28,19 @@ The computed version format is currently `major.minor.patch.build`, where `build
 ## Branch Rules In Code
 
 - `main`: uses base version and appends commit count
-- `develop`: bumps minor, resets patch to `0`, appends commit count
-- `feature/*`: same as `develop`
-- `release/*`: branch version wins if encoded in branch name, otherwise bumps minor
+- `develop`: bumps patch, appends commit count
+- `feature/*`: same as `develop`, using an inferred versioned source branch as base when available
+- `bugfix/*`: uses an inferred versioned source branch as base when available, otherwise keeps base version
+- `release/*`: branch version wins if encoded in branch name, otherwise keeps base version
 - `hotfix/*`: branch version wins if encoded in branch name, otherwise keeps base version and appends commit count
+- `support/*`: branch version wins if encoded in branch name, otherwise uses an inferred versioned source branch as base when available
 
 ## Operational Notes
 
 - Config is optional and loaded from `.gitversion.config.js` in the target repo root.
 - Only tags matching the configured prefix and a numeric `X`, `X.Y`, or `X.Y.Z` shape are considered.
 - CI and detached HEAD support depend partly on environment-variable fallback in `src/git.ts`.
+- Source branch detection for `feature/*`, `bugfix/*`, and `support/*` depends on available local or remote refs.
 - The package is intended to publish only `dist/`, `README.md`, and `LICENSE`.
 
 ## Current Friction To Keep In Mind

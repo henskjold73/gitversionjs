@@ -40,8 +40,10 @@ Default config:
     main: "main",
     develop: "develop",
     feature: "feature/",
+    bugfix: "bugfix/",
     release: "release/",
     hotfix: "hotfix/",
+    support: "support/",
   },
   branchRegex: undefined,
 }
@@ -57,6 +59,7 @@ Collects Git state:
 - `currentBranch`
 - reachable valid tags
 - inferred `branchType`
+- inferred `sourceBranch` for `feature/*`, `bugfix/*`, and `support/*`
 
 It first asks Git for `git rev-parse --abbrev-ref HEAD`. If that returns
 `HEAD`, it tries common CI environment variables, then falls back to
@@ -69,8 +72,9 @@ tags from `git tag --list`.
 ### `src/version.ts`
 
 Owns the version rules. It parses tags, parses branch-encoded versions for
-`release/*` and `hotfix/*`, applies optional configured branch regex captures,
-sorts tags numerically, and builds the final `GitVersionInfo`.
+`release/*`, `hotfix/*`, and `support/*`, applies optional configured branch
+regex captures, sorts tags numerically, applies source branch context when
+available, and builds the final `GitVersionInfo`.
 
 The current version format is:
 
@@ -104,6 +108,7 @@ type GitVersionInfo = {
   minor: number;
   patch: number;
   branch: string;
+  sourceBranch: string | null;
   tag: string | null;
   branchType: string | null;
   timestamp: string;

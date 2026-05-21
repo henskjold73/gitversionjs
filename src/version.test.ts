@@ -9,8 +9,10 @@ const defaultConfig: GitVersionConfig = {
   tagPrefix: "v",
   branchPrefixes: {
     feature: "feature/",
+    bugfix: "bugfix/",
     release: "release/",
     hotfix: "hotfix/",
+    support: "support/",
   },
 };
 
@@ -82,10 +84,10 @@ describe("calculateVersion", () => {
       branchType: "feature",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("1.3.0.1"); // Includes build number
+    expect(version.version).toBe("1.2.4.1"); // Includes build number
   });
 
-  it("returns next minor version for release branch", () => {
+  it("uses branch encoded version for release branch", () => {
     const gitInfo: GitInfo = {
       currentBranch: "release/1.3.0",
       tags: ["v1.2.3"],
@@ -102,7 +104,7 @@ describe("calculateVersion", () => {
       branchType: "hotfix",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("1.2.3.1"); // Includes build number
+    expect(version.version).toBe("1.2.3.1"); // Includes build number, no bump
   });
 
   it("returns latest tag for main branch", () => {
@@ -156,8 +158,10 @@ describe("calculateVersion", () => {
         main: "main",
         develop: "develop",
         feature: "feature/",
+        bugfix: "bugfix/",
         release: "release/",
         hotfix: "hotfix/",
+        support: "support/",
       },
     };
 
@@ -267,6 +271,48 @@ describe("calculateVersion", () => {
     expect(version.patch).toBe(0);
   });
 
+  it("keeps base version for release branches without an encoded version", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "release/stabilize",
+      tags: ["v1.2.3"],
+      branchType: "release",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("1.2.3.1");
+  });
+
+  it("uses source branch version before bumping feature patch", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "feature/invoice-filter",
+      sourceBranch: "release/2.1",
+      tags: ["v1.9.9"],
+      branchType: "feature",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("2.1.1.1");
+  });
+
+  it("keeps source branch version for bugfix branches", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "bugfix/invoice-rounding",
+      sourceBranch: "release/2.1",
+      tags: ["v1.9.9"],
+      branchType: "bugfix",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("2.1.0.1");
+  });
+
+  it("uses support branch encoded versions without bumping", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "support/1.2",
+      tags: ["v1.9.9"],
+      branchType: "support",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("1.2.0.1");
+  });
+
   it("counts commits without returning the commit list when includeCommits is false", () => {
     mockExecSync.mockReturnValue("7\n" as any);
 
@@ -280,7 +326,7 @@ describe("calculateVersion", () => {
       cwd: "/repo",
     });
 
-    expect(version.version).toBe("1.3.0.7");
+    expect(version.version).toBe("1.2.4.7");
     expect(version.commits).toEqual([]);
     expect(mockExecSync).toHaveBeenCalledWith("git rev-list --count v1.2.3..HEAD", {
       cwd: "/repo",
@@ -295,7 +341,7 @@ describe("calculateVersion", () => {
       branchType: "develop",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("0.2.0.0");
+    expect(version.version).toBe("0.1.1.0");
     expect(version.branch).toBe("develop");
     expect(version.tag).toBeNull();
     expect(version.branchType).toBe("develop");

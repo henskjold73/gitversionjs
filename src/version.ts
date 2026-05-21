@@ -9,6 +9,7 @@ export type GitVersionInfo = {
   minor: number;
   patch: number;
   branch: string;
+  sourceBranch: string | null;
   tag: string | null;
   branchType: string | null;
   timestamp: string;
@@ -77,11 +78,11 @@ function parseVersionFromRegexMatch(
 }
 
 // Supports:
-//   release/2.2.0  → 2.2.0
-//   release/2.2    → 2.2.0
-//   release/2      → 2.0.0
-//   release/R2026-2.0 → 26.2.0
-// Same for hotfix/* (hotfix/1.2.3 etc.)
+//   release/2.2.0  -> 2.2.0
+//   release/2.2    -> 2.2.0
+//   release/2      -> 2.0.0
+//   release/R2026-2.0 -> 26.2.0
+// Same for hotfix/* and support/*.
 function parseVersionFromBranch(
   branch: string,
   branchRegex?: string | RegExp
@@ -96,7 +97,7 @@ function parseVersionFromBranch(
   }
 
   const releaseYearMatch = branch.match(
-    /^(?:release|hotfix)\/R20(\d{2})-(\d+)\.(\d+)$/
+    /^(?:release|hotfix|support)\/R20(\d{2})-(\d+)\.(\d+)$/
   );
   if (releaseYearMatch) {
     return [
@@ -107,7 +108,7 @@ function parseVersionFromBranch(
   }
 
   const m = branch.match(
-    /^(?:release|hotfix)\/(v?\d+)(?:\.(\d+))?(?:\.(\d+))?$/
+    /^(?:release|hotfix|support)\/(v?\d+)(?:\.(\d+))?(?:\.(\d+))?$/
   );
   if (!m) return null;
   return [toVersionNumber(m[1]), toVersionNumber(m[2]), toVersionNumber(m[3])];
@@ -166,15 +167,19 @@ export function calculateVersion(
   config: GitVersionConfig,
   options: { cwd?: string; includeCommits?: boolean } = {}
 ): GitVersionInfo {
-  const { tags, branchType, currentBranch } = gitInfo;
+  const { tags, branchType, currentBranch, sourceBranch = null } = gitInfo;
   const { tagPrefix = "v", branchRegex } = config;
   const { cwd = process.cwd(), includeCommits = true } = options;
 
-  // Base: branch-encoded version > latest tag > default
+  // Base: branch-encoded version > source branch-encoded version > latest tag > default
   const branchVer = parseVersionFromBranch(currentBranch, branchRegex);
+  const sourceBranchVer = sourceBranch
+    ? parseVersionFromBranch(sourceBranch, branchRegex)
+    : null;
   const latestTag = sortTagsDesc(tags, tagPrefix)[0] ?? null;
   const tagged = latestTag ? parseVersionFromTag(latestTag, tagPrefix) : null;
-  const [baseMajor, baseMinor, basePatch] = branchVer ?? tagged ?? [0, 1, 0];
+  const [baseMajor, baseMinor, basePatch] =
+    branchVer ?? sourceBranchVer ?? tagged ?? [0, 1, 0];
 
   // Get commits since the last tag
   const { commits, count: commitCount } = latestTag
@@ -194,26 +199,28 @@ export function calculateVersion(
       break;
     }
     case "develop": {
-      outMinor = outMinor + 1;
-      outPatch = 0;
+      outPatch = outPatch + 1;
       version = `${outMajor}.${outMinor}.${outPatch}.${commitCount}`;
       break;
     }
     case "feature": {
-      outMinor = outMinor + 1;
-      outPatch = 0;
+      outPatch = outPatch + 1;
       version = `${outMajor}.${outMinor}.${outPatch}.${commitCount}`;
       break;
     }
     case "release": {
-      if (!branchVer) {
-        outMinor = outMinor + 1;
-        outPatch = 0;
-      }
+      version = fmt(outMajor, outMinor, outPatch, commitCount);
+      break;
+    }
+    case "bugfix": {
       version = fmt(outMajor, outMinor, outPatch, commitCount);
       break;
     }
     case "hotfix": {
+      version = fmt(outMajor, outMinor, outPatch, commitCount);
+      break;
+    }
+    case "support": {
       version = fmt(outMajor, outMinor, outPatch, commitCount);
       break;
     }
@@ -228,6 +235,7 @@ export function calculateVersion(
     minor: outMinor,
     patch: outPatch,
     branch: currentBranch,
+    sourceBranch,
     tag: latestTag || null,
     branchType,
     timestamp: new Date().toISOString(),

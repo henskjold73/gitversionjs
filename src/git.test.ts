@@ -13,9 +13,13 @@ const mockExec = exec as unknown as Mock;
 const defaultConfig: GitVersionConfig = {
   tagPrefix: "v",
   branchPrefixes: {
+    main: "main",
+    develop: "develop",
     feature: "feature/",
+    bugfix: "bugfix/",
     release: "release/",
     hotfix: "hotfix/",
+    support: "support/",
   },
 };
 
@@ -30,6 +34,8 @@ describe("getGitInfo", () => {
         callback(null, { stdout: "feature/add-login\n" });
       } else if (cmd.includes("git tag --merged HEAD --list")) {
         callback(null, { stdout: "v1.0.0\nv1.1.0\n" });
+      } else {
+        callback(null, { stdout: "" });
       }
     });
 
@@ -44,6 +50,8 @@ describe("getGitInfo", () => {
         callback(null, { stdout: "feature/add-login\n" });
       } else if (cmd.includes("git tag --merged HEAD --list")) {
         callback(null, { stdout: "v1.0.0\nv1.1.0\nnot-a-tag\n" });
+      } else {
+        callback(null, { stdout: "" });
       }
     });
 
@@ -53,18 +61,20 @@ describe("getGitInfo", () => {
     expect(info.branchType).toBe("feature");
   });
 
-  it("returns null branchType if no match", async () => {
+  it("returns configured branchType for main", async () => {
     mockExec.mockImplementation((cmd, callback) => {
       if (cmd.includes("rev-parse")) {
         callback(null, { stdout: "main\n" });
       } else if (cmd.includes("git tag --merged HEAD --list")) {
         callback(null, { stdout: "v1.0.0\n" });
+      } else {
+        callback(null, { stdout: "" });
       }
     });
 
     const info = await getGitInfo(defaultConfig);
     expect(info.currentBranch).toBe("main");
-    expect(info.branchType).toBeNull();
+    expect(info.branchType).toBe("main");
   });
 
   it("filters tags by custom prefix", async () => {
@@ -78,6 +88,8 @@ describe("getGitInfo", () => {
         callback(null, { stdout: "release/1.2.0\n" });
       } else if (cmd.includes("git tag --merged HEAD --list")) {
         callback(null, { stdout: "release-1.0.0\nrelease-1.1.0\nv1.0.0\n" });
+      } else {
+        callback(null, { stdout: "" });
       }
     });
 
@@ -92,6 +104,8 @@ describe("getGitInfo", () => {
         callback(null, { stdout: "hotfix/urgent-fix\n" });
       } else if (cmd.includes("git tag --merged HEAD --list")) {
         callback(null, { stdout: "\n" });
+      } else {
+        callback(null, { stdout: "" });
       }
     });
 
@@ -108,6 +122,8 @@ describe("getGitInfo", () => {
         callback(new Error("unsupported"), null);
       } else if (cmd.includes("git tag --list")) {
         callback(null, { stdout: "v1.0.0\nv1.1.0\n" });
+      } else {
+        callback(null, { stdout: "" });
       }
     });
 
@@ -124,6 +140,8 @@ describe("getGitInfo", () => {
         callback(null, { stdout: "HEAD\n" });
       } else if (cmd.includes("git tag --merged HEAD --list")) {
         callback(null, { stdout: "v1.0.0\n" });
+      } else {
+        callback(null, { stdout: "" });
       }
     });
 
@@ -147,6 +165,8 @@ describe("getGitInfo", () => {
         callback(null, { stdout: "remotes/origin/release/2.1\n" });
       } else if (cmd.includes("git tag --merged HEAD --list")) {
         callback(null, { stdout: "v2.0.0\n" });
+      } else {
+        callback(null, { stdout: "" });
       }
     });
 
@@ -156,5 +176,33 @@ describe("getGitInfo", () => {
 
     process.env.GITHUB_HEAD_REF = originalHeadRef;
     process.env.GITHUB_REF_NAME = originalRefName;
+  });
+
+  it("infers source branch for feature branches", async () => {
+    mockExec.mockImplementation((cmd, callback) => {
+      if (cmd.includes("rev-parse")) {
+        callback(null, { stdout: "feature/add-login\n" });
+      } else if (cmd.includes("git tag --merged HEAD --list")) {
+        callback(null, { stdout: "v2.1.0\n" });
+      } else if (cmd.includes("for-each-ref")) {
+        callback(null, {
+          stdout:
+            "main\ndevelop\nfeature/add-login\nremotes/origin/release/2.1\n",
+        });
+      } else if (cmd.includes("merge-base --fork-point 'develop'")) {
+        callback(null, { stdout: "aaa111\n" });
+      } else if (cmd.includes("merge-base --fork-point 'release/2.1'")) {
+        callback(null, { stdout: "bbb222\n" });
+      } else if (cmd.includes("rev-list --count aaa111..HEAD")) {
+        callback(null, { stdout: "5\n" });
+      } else if (cmd.includes("rev-list --count bbb222..HEAD")) {
+        callback(null, { stdout: "2\n" });
+      } else {
+        callback(null, { stdout: "" });
+      }
+    });
+
+    const info = await getGitInfo(defaultConfig);
+    expect(info.sourceBranch).toBe("release/2.1");
   });
 });

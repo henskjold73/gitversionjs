@@ -37,6 +37,7 @@ Important details:
 - Handles detached HEAD by checking common CI env vars first
 - Falls back to `git name-rev --name-only HEAD`
 - Branch type is inferred from configured prefixes, not hardcoded branch parsing
+- Source branch is inferred for `feature/*`, `bugfix/*`, and `support/*` from available refs
 
 ### `version.ts`
 
@@ -44,11 +45,11 @@ This is the real behavior center.
 
 Important details:
 
-- Base version priority is `release/hotfix` branch-encoded version, then latest valid tag, then `0.1.0`
+- Base version priority is current branch-encoded version, then inferred source branch-encoded version, then latest valid tag, then `0.1.0`
 - Tags are sorted numerically after stripping the configured prefix
 - Commit count is computed from `latestTag..HEAD`
 - `includeCommits` controls whether the commit list is collected, not whether the build count exists
-- Branch-encoded versions are parsed only for `release/*` and `hotfix/*` shapes that contain numeric versions
+- Branch-encoded versions are parsed for `release/*`, `hotfix/*`, and `support/*` shapes that contain numeric versions
 
 If you change semantics, update tests and `README.md` together.
 

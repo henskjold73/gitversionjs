@@ -9,6 +9,7 @@ export interface GitInfo {
   currentBranch: string;
   tags: string[];
   branchType: string | null;
+  sourceBranch?: string | null;
 }
 
 function normalizeBranchName(ref: string): string {
@@ -51,6 +52,88 @@ function isValidSemverTag(tag: string, prefix: string): boolean {
   if (prefix && !tag.startsWith(prefix)) return false;
   const cleaned = prefix ? tag.slice(prefix.length) : tag;
   return /^\d+(\.\d+){0,2}$/.test(cleaned);
+}
+
+function branchNameMatchesPrefix(branch: string, prefix: string): boolean {
+  if (!prefix.endsWith("/")) return branch === prefix;
+  return branch.startsWith(prefix);
+}
+
+function normalizeCandidateBranch(ref: string): string {
+  return normalizeBranchName(ref.replace(/^origin\//, ""));
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+async function inferSourceBranch(
+  execGit: (cmd: string) => Promise<{ stdout: string }>,
+  currentBranch: string,
+  branchPrefixes: Record<string, string>
+): Promise<string | null> {
+  const sourceAwareTypes = new Set(["bugfix", "feature", "support"]);
+  const currentType = Object.entries(branchPrefixes).find(([, prefix]) =>
+    branchNameMatchesPrefix(currentBranch, prefix)
+  )?.[0];
+
+  if (!currentType || !sourceAwareTypes.has(currentType)) return null;
+
+  try {
+    const refs = await execGit(
+      'git for-each-ref --format="%(refname:short)" refs/heads refs/remotes'
+    );
+    const candidates = refs.stdout
+      .split("\n")
+      .map((ref) => normalizeCandidateBranch(ref.trim()))
+      .filter(Boolean)
+      .filter((branch) => branch !== "HEAD" && branch !== currentBranch)
+      .filter((branch, index, branches) => branches.indexOf(branch) === index)
+      .filter((branch) =>
+        Object.entries(branchPrefixes).some(
+          ([type, prefix]) =>
+            type !== currentType && branchNameMatchesPrefix(branch, prefix)
+        )
+      );
+
+    const scored: Array<{ branch: string; distance: number }> = [];
+
+    for (const branch of candidates) {
+      const quotedBranch = shellQuote(branch);
+      try {
+        const forkPoint = await execGit(
+          `git merge-base --fork-point ${quotedBranch} HEAD`
+        );
+        const base = forkPoint.stdout.trim();
+        if (!base) continue;
+
+        const distance = await execGit(`git rev-list --count ${base}..HEAD`);
+        scored.push({
+          branch,
+          distance: Number.parseInt(distance.stdout.trim(), 10) || 0,
+        });
+      } catch {
+        try {
+          const mergeBase = await execGit(`git merge-base ${quotedBranch} HEAD`);
+          const base = mergeBase.stdout.trim();
+          if (!base) continue;
+
+          const distance = await execGit(`git rev-list --count ${base}..HEAD`);
+          scored.push({
+            branch,
+            distance: Number.parseInt(distance.stdout.trim(), 10) || 0,
+          });
+        } catch {
+          // Candidate cannot be related to HEAD in this checkout.
+        }
+      }
+    }
+
+    scored.sort((a, b) => a.distance - b.distance);
+    return scored[0]?.branch ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getGitInfo(
@@ -101,12 +184,18 @@ export async function getGitInfo(
 
   const branchType =
     Object.entries(branchPrefixes).find(([type, prefix]) =>
-      currentBranch.startsWith(prefix)
+      branchNameMatchesPrefix(currentBranch, prefix)
     )?.[0] ?? null;
+  const sourceBranch = await inferSourceBranch(
+    execGit,
+    currentBranch,
+    branchPrefixes
+  );
 
   return {
     currentBranch,
     tags,
     branchType,
+    sourceBranch,
   };
 }

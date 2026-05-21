@@ -89,20 +89,21 @@ version: 1.2.3.5
 
 ### `develop`
 
-Bumps minor, resets patch to `0`, and appends the build number.
+Bumps patch and appends the build number.
 
 Example:
 
 ```text
 latest tag: v1.2.3
 commits since tag: 5
-version: 1.3.0.5
+version: 1.2.4.5
 ```
 
 ### `feature/*`
 
-Same behavior as `develop`: bumps minor, resets patch to `0`, and appends the
-build number.
+Same behavior as `develop`: bumps patch and appends the build number. If Git
+can infer that the feature branch was taken from a versioned source branch such
+as `release/2.1`, that source branch version is used as the base first.
 
 ### `release/*`
 
@@ -117,9 +118,14 @@ commits since tag: 3
 version: 2.1.0.3
 ```
 
-If the release branch does not contain a supported version, the latest tag is
-used as the base, minor is bumped, patch is reset to `0`, and the build number
-is appended.
+If the release branch does not contain a supported version, the base version is
+used unchanged and the build number is appended.
+
+### `bugfix/*`
+
+The base version is used unchanged and the build number is appended. If Git can
+infer that the bugfix branch was taken from a versioned source branch such as
+`release/2.1`, that source branch version is used as the base first.
 
 ### `hotfix/*`
 
@@ -127,6 +133,13 @@ If the branch name contains a supported version, that version wins.
 
 If the hotfix branch does not contain a supported version, the latest tag is
 used as the base unchanged and the build number is appended.
+
+### `support/*`
+
+If the support branch name contains a supported version, that version wins.
+Otherwise, the base version is used unchanged and the build number is appended.
+When Git can infer a versioned source branch, that source branch version is used
+as the base.
 
 ### Unknown Branches
 

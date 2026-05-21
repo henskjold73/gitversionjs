@@ -82,8 +82,10 @@ export default {
     main: "main",
     develop: "develop",
     feature: "feature/",
+    bugfix: "bugfix/",
     release: "release/",
     hotfix: "hotfix/",
+    support: "support/",
   },
   // Optional: extract a version from custom branch names.
   // Numeric capture groups become major, minor, patch.
@@ -95,15 +97,20 @@ export default {
 
 - **Tags**: latest reachable semver tag (prefix optional) is the base (e.g. `v1.2.3` or `1.2.3`)
 - **main**: exactly the base tag, with `.build` appended (e.g., `1.2.3.5`).
-- **develop**/**feature/**: bump **minor**, reset **patch → 0**, append `.build` (commit count)  
-  (e.g. `1.2.3` → `1.3.0.5`).
+- **develop**/**feature/**: bump **patch**, append `.build` (commit count)  
+  (e.g. `1.2.3` → `1.2.4.5`).
 - **release/X[.Y[.Z]]**: branch name is authoritative if it contains a version  
   (`release/2` → `2.0.0`, `release/2.1` → `2.1.0`, `release/2.1.3` → `2.1.3`).  
   Release-year names like `release/R2026-2.0` are also authoritative and resolve
   to `26.2.0`.
-  If not encoded, bump **minor** and reset **patch → 0** from base.
+  If not encoded, the current implementation keeps the base version and appends `.build`.
 - **hotfix/X[.Y[.Z]]**: branch name is authoritative if it contains a version.  
   If not encoded, the current implementation keeps the base version and appends `.build`.
+- **bugfix/**/**support/**: keep the base version and append `.build`.
+- **Source branch detection**: for `feature/`, `bugfix/`, and `support/`, the tool
+  attempts to infer the branch point from local and remote refs. If the source
+  branch name carries a supported version, that version is used as the base
+  before applying the branch rule.
 - **Custom branch regex**: when `branchRegex` matches, its numeric capture groups are used as
   `major.minor.patch` before falling back to tags or `0.1.0`. For example,
   `branchRegex: /^(?:hotfix|release)\/R(\d+)-(\d+)\.(\d+)$/` turns
