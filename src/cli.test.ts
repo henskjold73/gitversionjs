@@ -1,5 +1,6 @@
 import { spawn } from "child_process";
 import path from "path";
+import { decode } from "@toon-format/toon";
 import { describe, expect, it } from "vitest";
 
 function runCli(
@@ -62,5 +63,29 @@ describe("CLI", () => {
     expect(parsed).toHaveProperty("timestamp");
 
     expect(result.stderr).toBe("");
+  });
+
+  it("prints version in TOON format with --output toon", async () => {
+    const result = await runCli(["--output", "toon"]);
+    const parsed = decode(result.stdout);
+
+    expect(parsed).toHaveProperty("version");
+    expect(parsed).toHaveProperty("major");
+    expect(parsed).toHaveProperty("minor");
+    expect(parsed).toHaveProperty("patch");
+    expect(parsed).toHaveProperty("branch");
+    expect(parsed).toHaveProperty("timestamp");
+    expect(result.stdout).toContain("version:");
+    expect(result.stdout).toContain("commits[");
+    expect(result.stderr).toBe("");
+  });
+
+  it("reports unsupported output formats", async () => {
+    const result = await runCli(["--output", "xml"]);
+
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain(
+      'Unsupported output format "xml". Use text, json, or toon.'
+    );
   });
 });

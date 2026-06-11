@@ -19,7 +19,7 @@ commands, optional config, and version calculation.
 4. `calculateVersion()` chooses the base version, applies branch rules, counts
    commits since the latest tag, applies the branch suffix, and returns a
    `GitVersionInfo` object.
-5. The CLI prints either `version.version` as text or the whole object as JSON.
+5. The CLI prints either `version.version` as text or the whole object as JSON or TOON.
 
 ## Module Map
 
@@ -110,14 +110,15 @@ Commander-based CLI wrapper. It supports:
 
 - `--output text`
 - `--output json`
+- `--output toon`
 - `--cwd <path>`
 - `--no-include-commits`
 
-For text output, commit messages are not collected. For JSON output, commit
-messages are included unless `--no-include-commits` is passed.
+For text output, commit messages are not collected. For JSON and TOON output,
+commit messages are included unless `--no-include-commits` is passed.
 
-The CLI keeps warnings on `stderr` so stdout remains parseable for text and JSON
-output.
+The CLI keeps warnings on `stderr` so stdout remains parseable for text, JSON,
+and TOON output.
 
 ## Public Return Shape
 

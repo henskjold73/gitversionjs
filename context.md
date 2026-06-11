@@ -23,7 +23,7 @@ The computed version format is usually `major.minor.patch.build`, where `build` 
 1. `gitversion()` in `src/index.ts` loads config from `.gitversion.config.js`
 2. `getGitInfo()` in `src/git.ts` reads current branch and matching tags
 3. `calculateVersion()` in `src/version.ts` resolves a branch rule, selects a base version, applies any increment, and appends either the build number or branch metadata slug
-4. `src/cli.ts` prints either plain text or JSON
+4. `src/cli.ts` prints plain text, JSON, or TOON
 
 ## Branch Rules In Code
 

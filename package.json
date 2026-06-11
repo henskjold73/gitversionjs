@@ -1,6 +1,6 @@
 {
   "name": "gitversionjs",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Auto-generates SemVer versions from Git tags and branches, GitFlow-style.",
   "repository": {
     "type": "git",
@@ -43,6 +43,7 @@
     "LICENSE"
   ],
   "dependencies": {
+    "@toon-format/toon": "^2.3.0",
     "commander": "^14.0.0"
   },
   "devDependencies": {

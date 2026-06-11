@@ -11,7 +11,7 @@ GitVersionJS is a tiny tool that turns your Git tags & branches into a semantic 
   - Applies branch rules (e.g. `develop`, `feature/*`, `release/*`, `hotfix/*`)
 - Configurable tag prefix & branch naming
 - Works locally and in CI
-- Zero runtime deps for consumers
+- Small runtime dependency footprint
 - Includes branch-aware build suffixes: `.build` commit counts for most branches
   and SemVer build metadata slugs for `feature/*` and `support/*`.
 
@@ -28,6 +28,9 @@ gitversionjs
 
 # JSON output (machine-friendly)
 gitversionjs --output json
+
+# TOON output (compact, LLM-friendly)
+gitversionjs --output toon
 
 # run against another repository directory
 gitversionjs --cwd /path/to/repo --output json
@@ -49,9 +52,9 @@ Usage: gitversionjs [options]
 Generate semantic version from Git tags and branches
 
 Options:
-  --output <format>     Output format: text or json (default: "text")
+  --output <format>     Output format: text, json, or toon (default: "text")
   --cwd <path>          Path to repository root
-  --no-include-commits  Exclude commit list from JSON output
+  --no-include-commits  Exclude commit list from JSON and TOON output
   -h, --help            display help for command
 ```
 
