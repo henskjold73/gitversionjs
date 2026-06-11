@@ -9,7 +9,7 @@ It supports two entrypoints:
 - Library API via `src/index.ts`
 - CLI via `src/cli.ts`
 
-The computed version format is currently `major.minor.patch.build`, where `build` is the count of commits since the latest matching tag.
+The computed version format is usually `major.minor.patch.build`, where `build` is the count of commits since the latest matching tag. `feature/*` and `support/*` use SemVer build metadata instead: `major.minor.patch+branch-slug`.
 
 ## Layout
 
@@ -22,7 +22,7 @@ The computed version format is currently `major.minor.patch.build`, where `build
 
 1. `gitversion()` in `src/index.ts` loads config from `.gitversion.config.js`
 2. `getGitInfo()` in `src/git.ts` reads current branch and matching tags
-3. `calculateVersion()` in `src/version.ts` resolves a branch rule, selects a base version, applies any increment, and appends the build number
+3. `calculateVersion()` in `src/version.ts` resolves a branch rule, selects a base version, applies any increment, and appends either the build number or branch metadata slug
 4. `src/cli.ts` prints either plain text or JSON
 
 ## Branch Rules In Code
@@ -40,6 +40,8 @@ The computed version format is currently `major.minor.patch.build`, where `build
 - Only tags matching the configured prefix and a numeric `X`, `X.Y`, or `X.Y.Z` shape are considered.
 - CI and detached HEAD support depend partly on environment-variable fallback in `src/git.ts`.
 - Source branch detection for `feature/*`, `bugfix/*`, and `support/*` depends on available local or remote refs.
+- Commit counts are bounded with `git rev-list --count --max-count=10001`; histories above 10,000 commits after the latest tag cap the build number at `9999`, skip commit collection, and warn in the CLI.
+- Source branch inference only considers likely long-lived source branches and caps candidates to avoid spawning unbounded Git processes in large repos.
 - The package is intended to publish only `dist/`, `README.md`, and `LICENSE`.
 
 ## Current Friction To Keep In Mind

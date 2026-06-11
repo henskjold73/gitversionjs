@@ -17,7 +17,8 @@ commands, optional config, and version calculation.
 3. `getGitInfo()` runs Git commands in `cwd` to discover the current branch and
    reachable SemVer-like tags.
 4. `calculateVersion()` chooses the base version, applies branch rules, counts
-   commits since the latest tag, and returns a `GitVersionInfo` object.
+   commits since the latest tag, applies the branch suffix, and returns a
+   `GitVersionInfo` object.
 5. The CLI prints either `version.version` as text or the whole object as JSON.
 
 ## Module Map
@@ -37,7 +38,7 @@ Default config:
 {
   tagPrefix: "v",
   strategy: "gitflow",
-  bump: ["develop", "feature"],
+  bump: ["develop"],
   branchPrefixes: {
     main: "main",
     develop: "develop",
@@ -86,14 +87,22 @@ Branch rules are resolved in this order:
 2. compatibility rules generated from `bump`
 3. built-in strategy preset rules
 
-The current version format is:
+The default version format is:
 
 ```text
 major.minor.patch.build
 ```
 
 `build` is the number of commits from the latest valid tag to `HEAD`. If there
-is no valid tag, the build number is `0`.
+is no valid tag, the build number is `0`. Counts are bounded with
+`--max-count=10001`; when the threshold is exceeded, the build number is capped
+at `9999` and the CLI warns on `stderr`.
+
+`feature/*` and `support/*` use SemVer build metadata instead:
+
+```text
+major.minor.patch+branch-slug
+```
 
 ### `src/cli.ts`
 
@@ -106,6 +115,9 @@ Commander-based CLI wrapper. It supports:
 
 For text output, commit messages are not collected. For JSON output, commit
 messages are included unless `--no-include-commits` is passed.
+
+The CLI keeps warnings on `stderr` so stdout remains parseable for text and JSON
+output.
 
 ## Public Return Shape
 

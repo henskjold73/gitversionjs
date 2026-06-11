@@ -21,7 +21,7 @@ describe("loadConfig", () => {
     const config = await loadConfig("nonexistent.js");
     expect(config.tagPrefix).toBe("v");
     expect(config.strategy).toBe("gitflow");
-    expect(config.bump).toEqual(["develop", "feature"]);
+    expect(config.bump).toEqual(["develop"]);
     expect(config.branchPrefixes).toEqual({
       main: "main",
       develop: "develop",

@@ -74,17 +74,33 @@ const mockExecSync = vi.mocked(execSync);
 describe("calculateVersion", () => {
   beforeEach(() => {
     mockExecSync.mockReset();
-    mockExecSync.mockReturnValue("abc123 Commit 1\n" as any);
+    mockExecSync.mockImplementation((command) => {
+      if (String(command).startsWith("git rev-list --count ")) {
+        return "1\n" as any;
+      }
+
+      return "abc123 Commit 1\n" as any;
+    });
   });
 
-  it("returns prerelease version for feature branch", () => {
+  it("returns build metadata slug for feature branch", () => {
     const gitInfo: GitInfo = {
       currentBranch: "feature/add-login",
       tags: ["v1.2.3"],
       branchType: "feature",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("1.2.4.1"); // Includes build number
+    expect(version.version).toBe("1.2.3+add-login");
+  });
+
+  it("sanitizes feature branch names for SemVer build metadata", () => {
+    const gitInfo: GitInfo = {
+      currentBranch: "feature/Jira_123/Add login!",
+      tags: ["v1.2.3"],
+      branchType: "feature",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig);
+    expect(version.version).toBe("1.2.3+jira-123-add-login");
   });
 
   it("uses the default bump config when bump is not set", () => {
@@ -162,7 +178,7 @@ describe("calculateVersion", () => {
     );
 
     expect(devVersion.version).toBe("1.2.4.1");
-    expect(featureVersion.version).toBe("1.2.4.1");
+    expect(featureVersion.version).toBe("1.2.4+add-login");
     expect(hotfixVersion.version).toBe("1.2.3.1");
   });
 
@@ -474,7 +490,7 @@ describe("calculateVersion", () => {
       branchType: "feature",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("2.1.1.1");
+    expect(version.version).toBe("2.1.0+invoice-filter");
   });
 
   it("keeps source branch version for bugfix branches", () => {
@@ -495,7 +511,7 @@ describe("calculateVersion", () => {
       branchType: "support",
     };
     const version = calculateVersion(gitInfo, defaultConfig);
-    expect(version.version).toBe("1.2.0.1");
+    expect(version.version).toBe("1.2.0+1-2");
   });
 
   it("counts commits without returning the commit list when includeCommits is false", () => {
@@ -511,12 +527,89 @@ describe("calculateVersion", () => {
       cwd: "/repo",
     });
 
-    expect(version.version).toBe("1.2.4.7");
+    expect(version.version).toBe("1.2.3+add-login");
     expect(version.commits).toEqual([]);
-    expect(mockExecSync).toHaveBeenCalledWith("git rev-list --count v1.2.3..HEAD", {
-      cwd: "/repo",
-      encoding: "utf-8",
+    expect(mockExecSync).toHaveBeenCalledWith(
+      "git rev-list --count --max-count=10001 v1.2.3..HEAD",
+      {
+        cwd: "/repo",
+        encoding: "utf-8",
+      }
+    );
+  });
+
+  it("collects commits in pages when the commit log is large", () => {
+    mockExecSync.mockImplementation((command) => {
+      const commandText = String(command);
+
+      if (commandText.startsWith("git rev-list --count ")) {
+        return "1001\n" as any;
+      }
+
+      if (commandText.includes("--skip=0")) {
+        return "abc123 Commit 1\n" as any;
+      }
+
+      if (commandText.includes("--skip=1000")) {
+        return "def456 Commit 1001\n" as any;
+      }
+
+      return "" as any;
     });
+
+    const gitInfo: GitInfo = {
+      currentBranch: "feature/add-login",
+      tags: ["v1.2.3"],
+      branchType: "feature",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig, { cwd: "/repo" });
+
+    expect(version.version).toBe("1.2.3+add-login");
+    expect(version.commits).toEqual(["abc123 Commit 1", "def456 Commit 1001"]);
+    expect(mockExecSync).toHaveBeenCalledWith(
+      "git rev-list --count --max-count=10001 v1.2.3..HEAD",
+      {
+        cwd: "/repo",
+        encoding: "utf-8",
+      }
+    );
+    expect(mockExecSync).toHaveBeenCalledWith(
+      'git log v1.2.3..HEAD --pretty=format:"%h %s" --max-count=1000 --skip=0',
+      { cwd: "/repo", encoding: "utf-8" }
+    );
+    expect(mockExecSync).toHaveBeenCalledWith(
+      'git log v1.2.3..HEAD --pretty=format:"%h %s" --max-count=1000 --skip=1000',
+      { cwd: "/repo", encoding: "utf-8" }
+    );
+  });
+
+  it("caps build number and skips commit collection after 10000 commits", () => {
+    mockExecSync.mockImplementation((command) => {
+      const commandText = String(command);
+
+      if (commandText.startsWith("git rev-list --count ")) {
+        return "10001\n" as any;
+      }
+
+      return "abc123 Commit 1\n" as any;
+    });
+
+    const gitInfo: GitInfo = {
+      currentBranch: "main",
+      tags: ["v1.2.3"],
+      branchType: "main",
+    };
+    const version = calculateVersion(gitInfo, defaultConfig, { cwd: "/repo" });
+
+    expect(version.version).toBe("1.2.3.9999");
+    expect(version.commits).toEqual([]);
+    expect(version.warnings).toEqual([
+      "More than 10000 commits were found after the latest tag. Build number was capped at 9999. Add a new tag soon to avoid slow version calculation.",
+    ]);
+    expect(mockExecSync).not.toHaveBeenCalledWith(
+      expect.stringContaining("git log"),
+      expect.anything()
+    );
   });
 
   it("returns branch metadata and empty commits when no tags exist", () => {

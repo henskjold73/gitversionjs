@@ -12,7 +12,8 @@ GitVersionJS is a tiny tool that turns your Git tags & branches into a semantic 
 - Configurable tag prefix & branch naming
 - Works locally and in CI
 - Zero runtime deps for consumers
-- Includes a `.build` number (commit count) in the version string.
+- Includes branch-aware build suffixes: `.build` commit counts for most branches
+  and SemVer build metadata slugs for `feature/*` and `support/*`.
 
 ---
 
@@ -62,7 +63,7 @@ Options:
 import { gitversion } from "gitversionjs";
 
 const info = await gitversion(); // { version, major, minor, patch, branch, tag, branchType, timestamp, commits }
-console.log(info.version); // e.g. "1.2.0.5", "1.3.0.1724329999"
+console.log(info.version); // e.g. "1.2.0.5", "1.3.0+some-feature"
 
 /// optional: target a specific repo directory
 const infoFromOtherRepo = await gitversion({ cwd: "/path/to/repo" });
@@ -79,8 +80,8 @@ Create a `.gitversion.config.js` in your repo root (ESM):
 export default {
   tagPrefix: "v", // e.g. "v1.2.3" → strip "v"
   // Branch types or branch name prefixes that should bump patch.
-  // Defaults to ["develop", "feature"] when omitted.
-  bump: ["develop", "feature"],
+  // Defaults to ["develop"] when omitted.
+  bump: ["develop"],
   branchPrefixes: {
     main: "main",
     develop: "develop",
@@ -109,8 +110,10 @@ export default {
 
 - **Tags**: latest reachable semver tag (prefix optional) is the base (e.g. `v1.2.3` or `1.2.3`)
 - **main**: exactly the base tag, with `.build` appended (e.g., `1.2.3.5`).
-- **develop**/**feature/**: bump **patch**, append `.build` (commit count)  
+- **develop**: bump **patch**, append `.build` (commit count)  
   (e.g. `1.2.3` → `1.2.4.5`).
+- **feature/**: keep the base version, append SemVer build metadata from the
+  branch slug (e.g. `feature/some-feature` → `1.2.3+some-feature`).
 - **Configurable bumping**: set `bump` to the branch types or branch name
   prefixes that should bump patch, for example `["dev", "feature/", "hotfix"]`.
   Branches not matched by `bump` keep the base version and append `.build`.
@@ -128,7 +131,12 @@ export default {
   If not encoded, the current implementation keeps the base version and appends `.build`.
 - **hotfix/X[.Y[.Z]]**: branch name is authoritative if it contains a version.  
   If not encoded, the current implementation keeps the base version and appends `.build`.
-- **bugfix/**/**support/**: keep the base version and append `.build`.
+- **bugfix/**: keep the base version and append `.build`.
+- **support/**: keep the base version and append SemVer build metadata from
+  the branch slug.
+- **Large histories**: when more than 10,000 commits exist after the latest
+  tag, the build number is capped at `9999`, commit collection is skipped, and
+  the CLI prints a red warning to `stderr`.
 - **Source branch detection**: for `feature/`, `bugfix/`, and `support/`, the tool
   attempts to infer the branch point from local and remote refs. If the source
   branch name carries a supported version, that version is used as the base

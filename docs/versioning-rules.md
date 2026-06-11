@@ -3,7 +3,7 @@
 GitVersionJS computes a SemVer-like version from Git tags, branch names, and
 commit count.
 
-The output format is:
+Most branches use this output format:
 
 ```text
 major.minor.patch.build
@@ -12,6 +12,13 @@ major.minor.patch.build
 The first three numbers come from a branch-encoded version, a tag, or the
 default base. The fourth number is the number of commits since the latest valid
 tag.
+
+`feature/*` and `support/*` use SemVer build metadata instead of the commit
+count suffix:
+
+```text
+major.minor.patch+branch-slug
+```
 
 ## Valid Tags
 
@@ -129,9 +136,18 @@ version: 1.2.4.5
 
 ### `feature/*`
 
-Same behavior as `develop`: bumps patch and appends the build number. If Git
-can infer that the feature branch was taken from a versioned source branch such
-as `release/2.1`, that source branch version is used as the base first.
+Keeps the base version and appends SemVer build metadata derived from the branch
+slug. If Git can infer that the feature branch was taken from a versioned source
+branch such as `release/2.1`, that source branch version is used as the base
+first.
+
+Example:
+
+```text
+branch: feature/some-feature
+latest tag: v1.1.0
+version: 1.1.0+some-feature
+```
 
 ### `release/*`
 
@@ -165,24 +181,34 @@ used as the base unchanged and the build number is appended.
 ### `support/*`
 
 If the support branch name contains a supported version, that version wins.
-Otherwise, the base version is used unchanged and the build number is appended.
-When Git can infer a versioned source branch, that source branch version is used
-as the base.
+Otherwise, the base version is used unchanged. In both cases, SemVer build
+metadata is appended from the branch slug. When Git can infer a versioned source
+branch, that source branch version is used as the base.
 
 ### Unknown Branches
 
 Unknown branch types use the base version unchanged and append the build number.
 
-## Build Number
+## Build Number And Metadata
 
 When a valid latest tag exists:
 
 - with commits included, the tool runs
-  `git log <latestTag>..HEAD --pretty=format:"%h %s"` and counts returned lines
+  `git rev-list --count --max-count=10001 <latestTag>..HEAD`, then collects
+  commit messages with paged
+  `git log <latestTag>..HEAD --pretty=format:"%h %s"` calls
 - with commits excluded, the tool runs
-  `git rev-list --count <latestTag>..HEAD`
+  `git rev-list --count --max-count=10001 <latestTag>..HEAD`
 
 When no valid tag exists, the build number is `0` and the commit list is empty.
 
+When more than 10,000 commits exist after the latest tag, the tool caps the
+build number at `9999`, skips commit-message collection, and returns a warning.
+The CLI prints that warning in red on `stderr`.
+
 `includeCommits` only controls whether commit messages are returned. It does not
-remove the build number from the version string.
+remove the build suffix from the version string.
+
+For `feature/*` and `support/*`, the commit count is still used internally and
+commit messages can still be returned in JSON, but the `version` string uses
+`+branch-slug` instead of `.build`.

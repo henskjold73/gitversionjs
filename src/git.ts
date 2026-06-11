@@ -4,6 +4,7 @@ import { promisify } from "util";
 import { GitVersionConfig } from "./config.js";
 
 const execAsync = promisify(exec);
+const SOURCE_BRANCH_CANDIDATE_LIMIT = 100;
 
 export interface GitInfo {
   currentBranch: string;
@@ -64,7 +65,21 @@ function normalizeCandidateBranch(ref: string): string {
 }
 
 function shellQuote(value: string): string {
+  if (process.platform === "win32") {
+    return `"${value.replace(/(["\\])/g, "\\$1")}"`;
+  }
+
   return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function sourceBranchPriority(branch: string, branchPrefixes: Record<string, string>) {
+  const priority = ["release", "hotfix", "support", "develop", "main"];
+  const type = priority.find((entry) => {
+    const prefix = branchPrefixes[entry];
+    return prefix ? branchNameMatchesPrefix(branch, prefix) : false;
+  });
+
+  return type ? priority.indexOf(type) : priority.length;
 }
 
 async function inferSourceBranch(
@@ -92,9 +107,17 @@ async function inferSourceBranch(
       .filter((branch) =>
         Object.entries(branchPrefixes).some(
           ([type, prefix]) =>
-            type !== currentType && branchNameMatchesPrefix(branch, prefix)
+            type !== currentType &&
+            ["main", "develop", "release", "hotfix", "support"].includes(type) &&
+            branchNameMatchesPrefix(branch, prefix)
         )
-      );
+      )
+      .sort(
+        (a, b) =>
+          sourceBranchPriority(a, branchPrefixes) -
+          sourceBranchPriority(b, branchPrefixes)
+      )
+      .slice(0, SOURCE_BRANCH_CANDIDATE_LIMIT);
 
     const scored: Array<{ branch: string; distance: number }> = [];
 

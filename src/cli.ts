@@ -17,6 +17,7 @@ program
   .parse(process.argv);
 
 const options = program.opts();
+const red = (message: string) => `\u001b[31m${message}\u001b[0m`;
 
 (async () => {
   try {
@@ -26,6 +27,10 @@ const options = program.opts();
       cwd: options.cwd,
       includeCommits,
     });
+
+    for (const warning of version.warnings ?? []) {
+      console.error(red(warning));
+    }
 
     if (options.output === "json") {
       console.log(JSON.stringify(version, null, 2));

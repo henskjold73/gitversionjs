@@ -44,7 +44,7 @@ export interface BranchRule {
 const defaultConfig: GitVersionConfig = {
   tagPrefix: "v",
   strategy: "gitflow",
-  bump: ["develop", "feature"],
+  bump: ["develop"],
   branchPrefixes: {
     main: "main",
     develop: "develop",

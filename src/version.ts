@@ -25,6 +25,7 @@ export type GitVersionInfo = {
   increment?: BranchRuleIncrement;
   timestamp: string;
   commits: string[]; // Include commits in the returned object
+  warnings?: string[];
 };
 
 type ResolvedRule = Required<
@@ -141,10 +142,17 @@ function sortTagsDesc(tags: string[], prefix: string): string[] {
   });
 }
 
-function fmt(maj: number, min: number, pat: number, build?: number) {
-  return build !== undefined
-    ? `${maj}.${min}.${pat}.${build}`
-    : `${maj}.${min}.${pat}`;
+function fmt(
+  maj: number,
+  min: number,
+  pat: number,
+  build?: number,
+  buildMetadata?: string
+) {
+  const core =
+    build !== undefined ? `${maj}.${min}.${pat}.${build}` : `${maj}.${min}.${pat}`;
+
+  return buildMetadata ? `${core}+${buildMetadata}` : core;
 }
 
 function normalizeBase(base: BranchRule["base"]): BranchRuleBase[] {
@@ -269,7 +277,7 @@ function bumpRule(entry: string): BranchRule {
 function defaultRules(config: GitVersionConfig): ResolvedRule[] {
   const rules = [
     ...(config.branchRules ?? []),
-    ...((config.bump ?? ["develop", "feature"]).map(bumpRule)),
+    ...((config.bump ?? ["develop"]).map(bumpRule)),
     ...presetRules(config.strategy),
   ];
 
@@ -364,10 +372,62 @@ function chooseBaseVersion(
   return { version: versions.default, source: "default" };
 }
 
+function branchUsesBuildMetadataSlug(branch: string, branchType: string | null) {
+  return (
+    branchType === "feature" ||
+    branchType === "support" ||
+    branch.startsWith("feature/") ||
+    branch.startsWith("support/")
+  );
+}
+
+function toBuildMetadataSlug(branch: string): string {
+  const branchWithoutType = branch.replace(/^(?:feature|support)\//, "");
+  const slug = branchWithoutType
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^0-9a-z-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return slug || "branch";
+}
+
 type CommitInfo = {
   commits: string[];
   count: number;
+  warnings: string[];
 };
+
+const COMMIT_LOG_PAGE_SIZE = 1000;
+const COMMIT_COUNT_WARNING_THRESHOLD = 10000;
+const CAPPED_BUILD_NUMBER = 9999;
+const TOO_MANY_COMMITS_WARNING =
+  "More than 10000 commits were found after the latest tag. Build number was capped at 9999. Add a new tag soon to avoid slow version calculation.";
+
+function getCommitCountSinceLatestTag(
+  latestTag: string,
+  cwd: string
+): { count: number; capped: boolean } {
+  const countResult = execSync(
+    [
+      "git rev-list --count",
+      `--max-count=${COMMIT_COUNT_WARNING_THRESHOLD + 1}`,
+      `${latestTag}..HEAD`,
+    ].join(" "),
+    {
+      cwd,
+      encoding: "utf-8",
+    }
+  );
+  const count = Number.parseInt(countResult.trim(), 10) || 0;
+  return {
+    count:
+      count > COMMIT_COUNT_WARNING_THRESHOLD ? CAPPED_BUILD_NUMBER : count,
+    capped: count > COMMIT_COUNT_WARNING_THRESHOLD,
+  };
+}
 
 function getCommitsSinceLatestTag(
   latestTag: string,
@@ -375,24 +435,36 @@ function getCommitsSinceLatestTag(
   includeCommits: boolean
 ): CommitInfo {
   try {
-    if (includeCommits) {
-      const result = execSync(
-        `git log ${latestTag}..HEAD --pretty=format:"%h %s"`,
-        { cwd, encoding: "utf-8" }
-      );
-      const commits = result.split("\n").filter(Boolean);
-      return { commits, count: commits.length };
+    const { count, capped } = getCommitCountSinceLatestTag(latestTag, cwd);
+    const warnings = capped ? [TOO_MANY_COMMITS_WARNING] : [];
+
+    if (capped) {
+      return { commits: [], count, warnings };
     }
 
-    const countResult = execSync(`git rev-list --count ${latestTag}..HEAD`, {
-      cwd,
-      encoding: "utf-8",
-    });
-    const count = Number.parseInt(countResult.trim(), 10) || 0;
-    return { commits: [], count };
+    if (includeCommits) {
+      const commits: string[] = [];
+
+      for (let skip = 0; skip < count; skip += COMMIT_LOG_PAGE_SIZE) {
+        const result = execSync(
+          [
+            `git log ${latestTag}..HEAD`,
+            '--pretty=format:"%h %s"',
+            `--max-count=${COMMIT_LOG_PAGE_SIZE}`,
+            `--skip=${skip}`,
+          ].join(" "),
+          { cwd, encoding: "utf-8" }
+        );
+        commits.push(...result.split("\n").filter(Boolean));
+      }
+
+      return { commits, count, warnings };
+    }
+
+    return { commits: [], count, warnings };
   } catch (error) {
     console.error("Error fetching commits:", error);
-    return { commits: [], count: 0 };
+    return { commits: [], count: 0, warnings: [] };
   }
 }
 
@@ -420,15 +492,24 @@ export function calculateVersion(
   });
 
   // Get commits since the last tag
-  const { commits, count: commitCount } = latestTag
+  const { commits, count: commitCount, warnings } = latestTag
     ? getCommitsSinceLatestTag(latestTag, cwd, includeCommits)
-    : { commits: [], count: 0 };
+    : { commits: [], count: 0, warnings: [] };
 
   const [outMajor, outMinor, outPatch] = applyIncrement(
     base.version,
     rule.increment
   );
-  const version = fmt(outMajor, outMinor, outPatch, commitCount);
+  const buildMetadata = branchUsesBuildMetadataSlug(currentBranch, branchType)
+    ? toBuildMetadataSlug(currentBranch)
+    : undefined;
+  const version = fmt(
+    outMajor,
+    outMinor,
+    outPatch,
+    buildMetadata ? undefined : commitCount,
+    buildMetadata
+  );
 
   return {
     version,
@@ -446,5 +527,6 @@ export function calculateVersion(
     increment: rule.increment,
     timestamp: new Date().toISOString(),
     commits, // Include commits in the returned object
+    ...(warnings.length ? { warnings } : {}),
   };
 }
