@@ -35,6 +35,25 @@ function runCli(
   });
 }
 
+function expectVersionInfoPayload(parsed: Record<string, unknown>) {
+  expect(parsed).toHaveProperty("version");
+  expect(String(parsed.version)).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
+
+  expect(typeof parsed.major).toBe("number");
+  expect(typeof parsed.minor).toBe("number");
+  expect(typeof parsed.patch).toBe("number");
+  expect(typeof parsed.branch).toBe("string");
+  expect(String(parsed.branch).length).toBeGreaterThan(0);
+
+  expect(parsed.tag === null || typeof parsed.tag === "string").toBe(true);
+  expect(
+    parsed.branchType === null || typeof parsed.branchType === "string"
+  ).toBe(true);
+
+  expect(parsed).toHaveProperty("timestamp");
+  expect(Array.isArray(parsed.commits)).toBe(true);
+}
+
 describe("CLI", () => {
   it("prints version in text format by default", async () => {
     const result = await runCli();
@@ -46,37 +65,24 @@ describe("CLI", () => {
     const result = await runCli(["--output", "json"]);
     const parsed = JSON.parse(result.stdout);
 
-    expect(parsed).toHaveProperty("version");
-    expect(parsed.version).toMatch(/^\d+\.\d+\.\d+\.\d+$/); // Includes build number
-
-    expect(typeof parsed.major).toBe("number");
-    expect(typeof parsed.minor).toBe("number");
-    expect(typeof parsed.patch).toBe("number");
-    expect(typeof parsed.branch).toBe("string");
-    expect(parsed.branch.length).toBeGreaterThan(0);
-
-    expect(parsed.tag === null || typeof parsed.tag === "string").toBe(true);
-    expect(
-      parsed.branchType === null || typeof parsed.branchType === "string"
-    ).toBe(true);
-
-    expect(parsed).toHaveProperty("timestamp");
-
+    expectVersionInfoPayload(parsed);
     expect(result.stderr).toBe("");
   });
 
   it("prints version in TOON format with --output toon", async () => {
+    const jsonResult = await runCli(["--output", "json"]);
+    const jsonParsed = JSON.parse(jsonResult.stdout) as Record<
+      string,
+      unknown
+    >;
     const result = await runCli(["--output", "toon"]);
-    const parsed = decode(result.stdout);
+    const parsed = decode(result.stdout) as Record<string, unknown>;
 
-    expect(parsed).toHaveProperty("version");
-    expect(parsed).toHaveProperty("major");
-    expect(parsed).toHaveProperty("minor");
-    expect(parsed).toHaveProperty("patch");
-    expect(parsed).toHaveProperty("branch");
-    expect(parsed).toHaveProperty("timestamp");
+    expectVersionInfoPayload(parsed);
+    expect(Object.keys(parsed).sort()).toEqual(Object.keys(jsonParsed).sort());
     expect(result.stdout).toContain("version:");
     expect(result.stdout).toContain("commits[");
+    expect(jsonResult.stderr).toBe("");
     expect(result.stderr).toBe("");
   });
 

@@ -33,10 +33,11 @@ const isOutputFormat = (value: unknown): value is OutputFormat =>
       );
     }
 
-    const includeCommits =
-      options.output === "json" || options.output === "toon"
-        ? options.includeCommits
-        : false;
+    const isStructuredOutput =
+      options.output === "json" || options.output === "toon";
+    const includeCommits = isStructuredOutput
+      ? options.includeCommits
+      : false;
     const version = await gitversion({
       cwd: options.cwd,
       includeCommits,
