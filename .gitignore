@@ -38,3 +38,8 @@ Thumbs.db
 *.tmp
 *.temp
 __tests__/fixtures/
+
+# graphify — graph.json/graph.html/GRAPH_REPORT.md are meant to be committed;
+# only the local-only cost log and cache are ignored
+graphify-out/cost.json
+graphify-out/cache/
